@@ -152,43 +152,79 @@ struct Data{
 					for(int i = 0; i<15; i++){
 						nombre[i] = '\0';
 					}
-						
-					
-					
+
+
+
 					campos.push_back(data);
 
 				}
 				in.close();
-				ofstream out(nombre_archivo, ios::out|ios::binary|ios::app);
-				int continuar;
-				do{
-					for(int i = 0; i<campos.size(); i++){
-						if(campos[i]->type == 1){
-							int dato;
-							cout<<campos[i]->name<<": ";
-							cin>>dato;
-							out.write(reinterpret_cast<char*>(&dato), sizeof(int));
-						}else{
-							char* dato = new char[campos[i]->size];
-							cout<<campos[i]->name<<": ";
-							cin>>dato;
-							for(int j = 0; j<campos[i]->size*sizeof(char); j++){
-								out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+				if(avail_list ==0){
+					ofstream out(nombre_archivo, ios::out|ios::binary|ios::app);
+					int continuar;
+					do{
+						for(int i = 0; i<campos.size(); i++){
+							if(campos[i]->type == 1){
+								int dato;
+								cout<<campos[i]->name<<": ";
+								cin>>dato;
+								out.write(reinterpret_cast<char*>(&dato), sizeof(int));
+							}else{
+								char* dato = new char[campos[i]->size];
+								cout<<campos[i]->name<<": ";
+								cin>>dato;
+								for(int j = 0; j<campos[i]->size*sizeof(char); j++){
+									out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+								}
 							}
 						}
-					}
-					cant_registros++;
-					cout<<"Ingrese 1 para ingresar otro registro: ";
-					cin>>continuar;
-				}while(continuar == 1);				
-				out.close();
-				
+						cant_registros++;
+						cout<<"Ingrese 1 para ingresar otro registro: ";
+						cin>>continuar;
+					}while(continuar == 1);				
+					out.close();
+				}else{
+					ofstream out(nombre_archivo, ios::out|ios::binary|ios::in);
+					int continuar;
+					do{
+						
+						int offset = sizeof(int)*3+cant_campos*(sizeof(int)*2+15);
+						int size_registro = 0;
+						for(int i = 0; i<campos.size(); i++){
+							if(campos[i]->type == 2)
+								size_registro += campos[i]->size;
+							else
+								size_registro += sizeof(int);
+						}
+					    offset += (avail_list-1)*size_registro;
+					    out.seekp(offset, ios_base::beg);
+					    for(int i = 0; i<campos.size(); i++){
+							if(campos[i]->type == 1){
+								int dato;
+								cout<<campos[i]->name<<": ";
+								cin>>dato;
+								out.write(reinterpret_cast<char*>(&dato), sizeof(int));
+							}else{
+								char* dato = new char[campos[i]->size];
+								cout<<campos[i]->name<<": ";
+								cin>>dato;
+								for(int j = 0; j<campos[i]->size*sizeof(char); j++){
+									out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+								}
+							}
+						}
+						cant_registros++;
+						cout<<"Ingrese 1 para ingresar otro registro: ";
+						cin>>continuar;
+					}while(continuar == 1);				
+					out.close();
+				}
 				fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
 				out2.seekp(sizeof(int)*2, ios_base::beg);
   				out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(int));//cantidad de registros
   				out2.close();
   				
-			}
+  			}
 		
 
 
