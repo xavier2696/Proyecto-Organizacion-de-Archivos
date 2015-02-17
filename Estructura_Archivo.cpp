@@ -305,7 +305,7 @@ struct Data{
 
 				}
 				
-				cout<<"cant registros "<<cant_registros<<endl;
+				//cout<<"cant registros "<<cant_registros<<endl;
 				for(int j = 0; j<cant_registros; j++){
 					char asterisco = 'x';
 					in.read(reinterpret_cast<char*>(&asterisco), sizeof(char));
@@ -489,22 +489,115 @@ struct Data{
 				out2.seekp(sizeof(int), ios_base::beg);
   				out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//avail list
   				out2.close();
-				/*char primero;
-				bool borrado = false;
-				int ultimo_borrado;
-				do{
-					char primero;
-					in.read(reinterpret_cast<char*>(&primero),sizeof(char));
-					if(primero == '*'){
-						in.read(reinterpret_cast<char*>(&ultimo_borrado),sizeof(int))
-					}else{
-
-					}
-				}while(borrado);*/
 
 			}
 		}else if(opcion == '6'){
+			string ingresado;				
+			stringstream ss;
+			stringstream ss2;
+			cout<<"Ingrese el nombre del archivo para compactar: ";
+			getline(cin,ingresado);
+			getline(cin,ingresado);
+			ss<<ingresado<<".bin";
+			ss2<<ingresado<<"1.bin";
+			char* nombre_archivo = new char(ingresado.size() + 5);
+			strcpy(nombre_archivo, ss.str().c_str());
+			char* nombre_archivo2 = new char(ingresado.size() + 6);
+			strcpy(nombre_archivo2, ss2.str().c_str());
+			fstream in(nombre_archivo, ios::in|ios::binary);
+			fstream out(nombre_archivo2, ios::out|ios::binary);
+			if(!in.is_open()){
+				printf("El archivo no existe \n");
+			}else{
+				int cant_campos;
+				int avail_list;
+				int cant_registros;
+				vector<Data*> campos;
+				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
+				out.write(reinterpret_cast<char*>(&cant_campos),sizeof(int));
+				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
+				out.write(reinterpret_cast<char*>(&avail_list),sizeof(int));
+				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+				out.write(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+				
+				for(int i = 0; i<cant_campos; i++){
+					Data* data = new Data;
+					char* nombre = new char[15];
+					int tipo;
+					int size;
+					in.read(nombre,sizeof(char)*15);
+					for(int i = 0; i<15*sizeof(char); i++){
+						out.write(reinterpret_cast<char*>(&(nombre[i])),sizeof(char));
+					}
+					
+					nombre[14] = '\0';
+					in.read(reinterpret_cast<char*>(&tipo),sizeof(int));
+					out.write(reinterpret_cast<char*>(&tipo),sizeof(int));
+					in.read(reinterpret_cast<char*>(&size),sizeof(int));
+					out.write(reinterpret_cast<char*>(&size),sizeof(int));
+					data->type = tipo;
+					data->size = size;
+					data->name = nombre;
+					for(int i = 0; i<15; i++){
+						nombre[i] = '\0';
+					}				
+					
+					
+					campos.push_back(data);
 
+				}
+				int registros_temp = cant_registros;
+				//cout<<"cant registros "<<cant_registros<<endl;
+				for(int j = 0; j<cant_registros; j++){
+					char asterisco = 'x';
+					in.read(reinterpret_cast<char*>(&asterisco), sizeof(char));
+					//cout<<asterisco<<endl;
+					in.seekp(-sizeof(char),ios_base::cur);
+					if(asterisco == '*'){
+						registros_temp--;
+						//cout<<"*"<<endl;
+						for(int i = 0; i<campos.size(); i++){
+							if(campos[i]->type == 1){
+								in.seekp(sizeof(int), ios_base::cur);
+							}else{
+								in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+							}
+						}
+					}else{
+
+						//cout<<"Registro "<<(j+1)<<endl;
+						for(int i = 0; i<campos.size(); i++){			
+							if(campos[i]->type == 1){
+								int dato;
+								in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+								out.write(reinterpret_cast<char*>(&dato), sizeof(int));
+								//cout<<campos[i]->name<<": "<<dato<<endl;
+							}else{
+								char* dato = new char[campos[i]->size];
+								in.read(dato, campos[i]->size*sizeof(char));
+								for(int i = 0; i<campos[i]->size*sizeof(char); i++){
+									out.write(reinterpret_cast<char*>(&(dato[i])),sizeof(char));
+								}
+								//out.write(dato, campos[i]->size*sizeof(char));
+
+								//cout<<campos[i]->name<<": "<<dato<<endl;
+							}
+						}
+					}
+				}
+				in.close();	
+				out.close();
+				remove(nombre_archivo);
+				rename(nombre_archivo2,nombre_archivo);
+
+				fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
+				out2.seekp(sizeof(int), ios_base::beg);
+				//cout<<"registros "<<cant_registros<<endl;
+				int temp_avail = 0;
+				out2.write(reinterpret_cast<char*>(&temp_avail), sizeof(int));//avail list
+  				out2.write(reinterpret_cast<char*>(&registros_temp), sizeof(int));//cant registros
+  				out2.close();
+			}
 		}else if(opcion == '7'){
 
 		}else if(opcion == '8'){
