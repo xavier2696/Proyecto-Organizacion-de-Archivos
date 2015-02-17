@@ -193,16 +193,6 @@ struct Data{
 						else
 							size_registro += sizeof(int);
 					}
-
-					/*ifstream in(nombre_archivo, ios::binary|ios::in);
-					int offset_temp = sizeof(int)*3+cant_campos*(sizeof(int)*2+15);
-					offset_temp += (avail_list-1)*size_registro;
-					offset_temp += sizeof(char);
-					in.seekg(offset_temp, ios_base::beg);
-					
-					in.read(reinterpret_cast<char*>(&disponible),sizeof(int));
-					in.close();*/
-
 					
 					int continuar;
 					do{			
@@ -599,6 +589,89 @@ struct Data{
   				out2.close();
 			}
 		}else if(opcion == '7'){
+			string ingresado;				
+			stringstream ss;
+			cout<<"Ingrese el nombre del archivo para modificar datos: ";
+			getline(cin,ingresado);
+			getline(cin,ingresado);
+			ss<<ingresado<<".bin";
+			char* nombre_archivo = new char(ingresado.size() + 5);
+			strcpy(nombre_archivo, ss.str().c_str());
+
+			
+			fstream in(nombre_archivo, ios::in|ios::binary);
+			if(!in.is_open()){
+				printf("El archivo no existe \n");
+			}else{
+				int cant_campos;
+				int avail_list;
+				int cant_registros;
+				vector<Data*> campos;
+				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
+				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
+				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+				
+				for(int i = 0; i<cant_campos; i++){
+					Data* data = new Data;
+					char* nombre = new char[15];
+					int tipo;
+					int size;
+					in.read(nombre,sizeof(char)*15);
+					nombre[14] = '\0';
+					in.read(reinterpret_cast<char*>(&tipo),sizeof(int));
+					in.read(reinterpret_cast<char*>(&size),sizeof(int));
+					data->type = tipo;
+					data->size = size;
+					data->name = nombre;
+					for(int i = 0; i<15; i++){
+						nombre[i] = '\0';
+					}
+
+
+
+					campos.push_back(data);
+
+				}
+				in.close();
+
+				int pos ;
+				do{
+					cout<<"Ingrese la posicion que desea modificar: ";
+					cin>>pos;
+				}while(pos<=0 && pos>cant_registros);
+
+				int size_registro = 0;
+					for(int i = 0; i<campos.size(); i++){
+						if(campos[i]->type == 2)
+							size_registro += campos[i]->size;
+						else
+							size_registro += sizeof(int);
+				}
+				ofstream out(nombre_archivo, ios::in|ios::out|ios::binary);
+				int offset = sizeof(int)*3+cant_campos*(sizeof(int)*2+15);
+
+				offset += (pos-1)*size_registro;
+				out.seekp(offset, ios_base::beg);
+				for(int i = 0; i<campos.size(); i++){
+					if(campos[i]->type == 1){
+						int dato;
+						cout<<campos[i]->name<<": ";
+						cin>>dato;
+								//cin>>dato;
+						out.write(reinterpret_cast<char*>(&dato), sizeof(int));
+					}else{
+						char* dato = new char[campos[i]->size];
+						cout<<campos[i]->name<<": ";
+						cin>>dato;
+								//cin>>dato;
+						for(int j = 0; j<campos[i]->size*sizeof(char); j++){
+							out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+						}
+					}
+				}
+				out.close();
+
+			}
 
 		}else if(opcion == '8'){
 
