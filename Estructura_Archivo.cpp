@@ -79,7 +79,7 @@ int main(int argc, char* argv[]){
 			int cant_registros = 0;
 			out.write(reinterpret_cast<char*>(&cant_campos), sizeof(int));//numero de campos
 			out.write(reinterpret_cast<char*>(&offset), sizeof(int));//avail list
-			out.write(reinterpret_cast<char*>(&cant_registros), sizeof(int));//espacio para cantidad de registros
+			out.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));//espacio para cantidad de registros
 			for(int i = 0; i<campos.size(); i++){
 				for(int j =0 ; j<15; j++){
 					out.write(reinterpret_cast<char*>(&((campos[i]->name)[j])), sizeof(char));
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]){
 
 			
 			out.seekp (sizeof(int)*2, ios::beg);
-				out.write(reinterpret_cast<char*>(&cant_registros), sizeof(int));//cantidad de registros
+				out.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));//cantidad de registros
 				out.close();
 
 
@@ -133,11 +133,11 @@ int main(int argc, char* argv[]){
 
 					int cant_campos;
 					int avail_list;
-					int cant_registros;
+					long int cant_registros;
 					vector<Data*> campos;
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
-					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           campos = ReadHeader(&in,cant_campos);
 					in.close();
 					int disponible = avail_list;
@@ -178,7 +178,7 @@ int main(int argc, char* argv[]){
 						int continuar;
 						do{			
 							ifstream in(nombre_archivo, ios::binary|ios::in);
-							int offset_temp = sizeof(int)*3+cant_campos*(sizeof(int)*2+15);
+							int offset_temp = sizeof(int)*2+sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 							offset_temp += (avail_list-1)*size_registro;
 							offset_temp += sizeof(char);
 							in.seekg(offset_temp, ios_base::beg);
@@ -187,7 +187,7 @@ int main(int argc, char* argv[]){
 							in.close();			
 
 							ofstream out(nombre_archivo, ios::out|ios::in|ios::binary);
-							int offset = sizeof(int)*3+cant_campos*(sizeof(int)*2+15);
+							int offset = sizeof(int)*2+sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 
 							offset += (avail_list-1)*size_registro;
 							out.seekp(offset, ios_base::beg);
@@ -226,7 +226,7 @@ int main(int argc, char* argv[]){
 					fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
 					out2.seekp(sizeof(int), ios_base::beg);
 			out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//nuevo avail_list
-				out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(int));//cantidad de registros
+				out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));//cantidad de registros
 				//cout<<"cant registros 1 "<<cant_registros<<endl;
 				out2.close();
 				
@@ -247,11 +247,11 @@ int main(int argc, char* argv[]){
 				}else{
 					int cant_campos;
 					int avail_list;
-					int cant_registros;
+					long int cant_registros;
 					vector<Data*> campos;
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
-					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           campos = ReadHeader(&in,cant_campos);
 
 			//cout<<"cant registros "<<cant_registros<<endl;
@@ -306,11 +306,11 @@ int main(int argc, char* argv[]){
 
 					int cant_campos;
 					int avail_list;
-					int cant_registros;
+					long int cant_registros;
 					vector<Data*> campos;
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
-					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           campos = ReadHeader(&in,cant_campos);
 					int pos;
 					do{
@@ -366,14 +366,14 @@ int main(int argc, char* argv[]){
 				}else{				
 					int cant_campos;
 					int avail_list;
-					int cant_registros;
+					long int cant_registros;
 					vector<Data*> campos;
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
-					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           campos = ReadHeader(&in,cant_campos);
 					in.close();
-					int offset = sizeof(int)*3+cant_campos*(sizeof(int)*2+15);
+					int offset = sizeof(int)*2 +sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 					int size_registro = 0;
 					int pos;
 					do{
@@ -421,14 +421,14 @@ int main(int argc, char* argv[]){
 			}else{
 				int cant_campos;
 				int avail_list;
-				int cant_registros;
+				long int cant_registros;
 				vector<Data*> campos;
 				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 				out.write(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 				out.write(reinterpret_cast<char*>(&avail_list),sizeof(int));
-				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
-				out.write(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
+				out.write(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
         //campos = ReadHeader(in,cant_campos);
         
 				for(int i = 0; i<cant_campos; i++){
@@ -457,7 +457,7 @@ int main(int argc, char* argv[]){
 					campos.push_back(data);
 
 				}
-				int registros_temp = cant_registros;
+				long int registros_temp = cant_registros;
 			//cout<<"cant registros "<<cant_registros<<endl;
 				for(int j = 0; j<cant_registros; j++){
 					char asterisco = 'x';
@@ -506,7 +506,7 @@ int main(int argc, char* argv[]){
 			//cout<<"registros "<<cant_registros<<endl;
 				int temp_avail = 0;
 			out2.write(reinterpret_cast<char*>(&temp_avail), sizeof(int));//avail list
-				out2.write(reinterpret_cast<char*>(&registros_temp), sizeof(int));//cant registros
+				out2.write(reinterpret_cast<char*>(&registros_temp), sizeof(long int));//cant registros
 				out2.close();
 			}
 		}else if(opcion == '7'){
@@ -526,11 +526,11 @@ int main(int argc, char* argv[]){
 			}else{
 				int cant_campos;
 				int avail_list;
-				int cant_registros;
+				long int cant_registros;
 				vector<Data*> campos;
 				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
-				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(int));
+				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
 				in.close();
 
 				int pos ;
@@ -547,7 +547,7 @@ int main(int argc, char* argv[]){
 						size_registro += sizeof(int);
 				}
 				ofstream out(nombre_archivo, ios::in|ios::out|ios::binary);
-				int offset = sizeof(int)*3+cant_campos*(sizeof(int)*2+15);
+				int offset = sizeof(int)*2+sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 
 				offset += (pos-1)*size_registro;
 				out.seekp(offset, ios_base::beg);
