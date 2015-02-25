@@ -88,31 +88,7 @@ int main(int argc, char* argv[]){
 				out.write(reinterpret_cast<char*>(&(campos[i]->type)), sizeof(int));
 				out.write(reinterpret_cast<char*>(&(campos[i]->size)), sizeof(int));
 			}
-			do{
-				for(int i = 0; i<campos.size(); i++){
-					if(campos[i]->type == 1){
-						int dato;
-						cout<<campos[i]->name<<": ";
-						cin>>dato;
-						out.write(reinterpret_cast<char*>(&dato), sizeof(int));
-					}else{
-						char* dato = new char[campos[i]->size];
-						cout<<campos[i]->name<<": ";
-						cin>>dato;
-						for(int j = 0; j<campos[i]->size*sizeof(char); j++){
-							out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
-						}
-					}
-				}
-				cant_registros++;
-				cout<<"Ingrese 1 para ingresar otro registro: ";
-				cin>>continuar;
-			}while(continuar == 1);
-
-			
-			out.seekp (sizeof(int)*2, ios::beg);
-				out.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));//cantidad de registros
-				out.close();
+			out.close();
 
 
 			}else if( opcion == '2'){
@@ -138,7 +114,7 @@ int main(int argc, char* argv[]){
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
-          campos = ReadHeader(&in,cant_campos);
+          			campos = ReadHeader(&in,cant_campos);
 					in.close();
 					int disponible = avail_list;
 					if(avail_list ==0){
@@ -152,11 +128,18 @@ int main(int argc, char* argv[]){
 									cin>>dato;
 									out.write(reinterpret_cast<char*>(&dato), sizeof(int));
 								}else{
-									char* dato = new char[campos[i]->size];
-									cout<<campos[i]->name<<": ";
-									cin>>dato;
-									for(int j = 0; j<campos[i]->size*sizeof(char); j++){
-										out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+									if(campos[i]->size == 1){
+										char dato;
+										cout<<campos[i]->name<<": ";
+										cin>>dato;
+										out.write(reinterpret_cast<char*>(&dato),sizeof(char));
+									}else{
+										char* dato = new char[campos[i]->size];
+										cout<<campos[i]->name<<": ";
+										cin>>dato;
+										for(int j = 0; j<campos[i]->size*sizeof(char); j++){
+											out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+										}
 									}
 								}
 							}
@@ -199,12 +182,18 @@ int main(int argc, char* argv[]){
 							//cin>>dato;
 									out.write(reinterpret_cast<char*>(&dato), sizeof(int));
 								}else{
-									char* dato = new char[campos[i]->size];
-									cout<<campos[i]->name<<": ";
-									cin>>dato;
-							//cin>>dato;
-									for(int j = 0; j<campos[i]->size*sizeof(char); j++){
-										out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+									if(campos[i]->size == 1){
+										char dato;
+										cout<<campos[i]->name<<": ";
+										cin>>dato;
+										out.write(reinterpret_cast<char*>(&dato),sizeof(char));
+									}else{
+										char* dato = new char[campos[i]->size];
+										cout<<campos[i]->name<<": ";
+										cin>>dato;
+										for(int j = 0; j<campos[i]->size*sizeof(char); j++){
+											out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
+										}
 									}
 								}
 							}
@@ -225,10 +214,10 @@ int main(int argc, char* argv[]){
 					}
 					fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
 					out2.seekp(sizeof(int), ios_base::beg);
-			out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//nuevo avail_list
-				out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));//cantidad de registros
+					out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//nuevo avail_list
+					out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));//cantidad de registros
 				//cout<<"cant registros 1 "<<cant_registros<<endl;
-				out2.close();
+					out2.close();
 				
 				}
 
@@ -252,7 +241,7 @@ int main(int argc, char* argv[]){
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
-          campos = ReadHeader(&in,cant_campos);
+          			campos = ReadHeader(&in,cant_campos);
 
 			//cout<<"cant registros "<<cant_registros<<endl;
 					for(int j = 0; j<cant_registros; j++){
@@ -278,10 +267,16 @@ int main(int argc, char* argv[]){
 									in.read(reinterpret_cast<char*>(&dato), sizeof(int));
 									cout<<campos[i]->name<<": "<<dato<<endl;
 								}else{
-									char* dato = new char[campos[i]->size];
-									in.read(dato, campos[i]->size*sizeof(char));
+									if(campos[i]->size == 1){
+										char dato;
+										in.read(&dato,sizeof(char));
+										cout<<campos[i]->name<<": "<<dato<<endl;
+									}else{
+										char* dato = new char[campos[i]->size];
+										in.read(dato, campos[i]->size*sizeof(char));
 
-									cout<<campos[i]->name<<": "<<dato<<endl;
+										cout<<campos[i]->name<<": "<<dato<<endl;
+									}
 								}
 							}
 						}
@@ -341,10 +336,16 @@ int main(int argc, char* argv[]){
 								in.read(reinterpret_cast<char*>(&dato), sizeof(int));
 								cout<<campos[i]->name<<": "<<dato<<endl;
 							}else{
-								char* dato = new char[campos[i]->size];
-								in.read(dato, campos[i]->size*sizeof(char));
+								if(campos[i]->size == 1){
+									char dato;
+									in.read(&dato,sizeof(char));
+									cout<<campos[i]->name<<": "<<dato<<endl;
+								}else{
+									char* dato = new char[campos[i]->size];
+									in.read(dato, campos[i]->size*sizeof(char));
 
-								cout<<campos[i]->name<<": "<<dato<<endl;
+									cout<<campos[i]->name<<": "<<dato<<endl;
+								}
 							}
 						}
 					}
@@ -484,10 +485,16 @@ int main(int argc, char* argv[]){
 								out.write(reinterpret_cast<char*>(&dato), sizeof(int));
 							//cout<<campos[i]->name<<": "<<dato<<endl;
 							}else{
-								char* dato = new char[campos[i]->size];
-								in.read(dato, campos[i]->size*sizeof(char));
-								for(int i = 0; i<campos[i]->size*sizeof(char); i++){
-									out.write(reinterpret_cast<char*>(&(dato[i])),sizeof(char));
+								if(campos[i]->size == 1){
+									char dato;
+									in.read(&dato, sizeof(char));
+									out.write(reinterpret_cast<char*>(&dato),sizeof(char));
+								}else{
+									char* dato = new char[campos[i]->size];
+									in.read(dato, campos[i]->size*sizeof(char));
+									for(int i = 0; i<campos[i]->size*sizeof(char); i++){
+										out.write(reinterpret_cast<char*>(&(dato[i])),sizeof(char));
+									}
 								}
 							//out.write(dato, campos[i]->size*sizeof(char));
 
@@ -559,13 +566,17 @@ int main(int argc, char* argv[]){
 							//cin>>dato;
 						out.write(reinterpret_cast<char*>(&dato), sizeof(int));
 					}else{
-						char* dato = new char[campos[i]->size];
-						cout<<campos[i]->name<<": ";
-						cin>>dato;
-							//cin>>dato;
-						for(int j = 0; j<campos[i]->size*sizeof(char); j++){
-							out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
-						}
+						if(campos[i]->size == 1){
+									char dato;
+									in.read(&dato, sizeof(char));
+									out.write(reinterpret_cast<char*>(&dato),sizeof(char));
+								}else{
+									char* dato = new char[campos[i]->size];
+									in.read(dato, campos[i]->size*sizeof(char));
+									for(int i = 0; i<campos[i]->size*sizeof(char); i++){
+										out.write(reinterpret_cast<char*>(&(dato[i])),sizeof(char));
+									}
+								}
 					}
 				}
 				out.close();
