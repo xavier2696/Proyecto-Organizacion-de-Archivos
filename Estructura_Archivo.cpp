@@ -13,28 +13,44 @@ struct Data{
 	int size;
 };
 
+struct Index{
+	string key;
+	int offset;
+};
+
 vector<Data*> ReadHeader(fstream* , int);
 
 int main(int argc, char* argv[]){
 	char opcion;
+	bool index = false;
 	do{
-		cout<<"Menu"<<endl 
-			<<"1)Definir estructura y guardar datos"<<endl 
+		cout<<"Menu"<<endl;
+		if(index){
+			cout<<"(Indices activados)"<<endl;
+		}
+		cout<<"1)Definir estructura y guardar datos"<<endl 
 			<<"2)Agregar datos a archivo"<<endl
 			<<"3)Listar datos de archivo"<<endl
 			<<"4)Buscar Registro"<<endl
 			<<"5)Borrar Registro"<<endl
 			<<"6)Compactar"<<endl
-			<<"7)Modificar Registro"<<endl
-			<<"8)Salir"<<endl
+			<<"7)Modificar Registro"<<endl;
+		if(index){
+			cout<<"8)Desactivar indices"<<endl;
+		}else{
+			cout<<"8)Activar indices"<<endl;
+		}
+		cout<<"9)Crear Arhivo indices"<<endl
+			<<"10)Salir"<<endl
 			<<"Ingrese su opcion: ";
 		cin>>opcion;
-		if(opcion == '1'){
+		if(opcion == 1){
 			//definicion de campos
 			int continuar;
 			vector<Data*> campos;
-
+			cout<<"El primer campo que ingrese es el campo llave"<<endl;
 			do{
+
 				Data* data = new Data;
 				char* nombre = new char[15];
 				cout<<"Ingrese el nombre del campo: ";
@@ -76,7 +92,7 @@ int main(int argc, char* argv[]){
 			//escribir header
 			int cant_campos = campos.size();
 			int offset = 0;
-			int cant_registros = 0;
+			long int cant_registros = 0;
 			out.write(reinterpret_cast<char*>(&cant_campos), sizeof(int));//numero de campos
 			out.write(reinterpret_cast<char*>(&offset), sizeof(int));//avail list
 			out.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));//espacio para cantidad de registros
@@ -91,7 +107,7 @@ int main(int argc, char* argv[]){
 			out.close();
 
 
-			}else if( opcion == '2'){
+			}else if( opcion == 2){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para cargar datos: ";
@@ -221,7 +237,7 @@ int main(int argc, char* argv[]){
 				
 				}
 
-			}else if(opcion == '3'){
+			}else if(opcion == 3){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para mostrar datos: ";
@@ -285,7 +301,7 @@ int main(int argc, char* argv[]){
 				}
 
 
-			}else if(opcion == '4'){
+			}else if(opcion == 4){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para mostrar los registros: ";
@@ -352,7 +368,7 @@ int main(int argc, char* argv[]){
 
 				}	
 
-			}else if(opcion == '5'){
+			}else if(opcion == 5){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para borrar el registro: ";
@@ -364,6 +380,7 @@ int main(int argc, char* argv[]){
 				fstream in(nombre_archivo, ios::in|ios::binary);
 				if(!in.is_open()){
 					printf("El archivo no existe \n");
+					in.close();
 				}else{				
 					int cant_campos;
 					int avail_list;
@@ -402,7 +419,7 @@ int main(int argc, char* argv[]){
 				out2.close();
 
 			}
-		}else if(opcion == '6'){
+		}else if(opcion == 6){
 			string ingresado;				
 			stringstream ss;
 			stringstream ss2;
@@ -516,7 +533,7 @@ int main(int argc, char* argv[]){
 				out2.write(reinterpret_cast<char*>(&registros_temp), sizeof(long int));//cant registros
 				out2.close();
 			}
-		}else if(opcion == '7'){
+		}else if(opcion == 7){
 			string ingresado;				
 			stringstream ss;
 			cout<<"Ingrese el nombre del archivo para modificar datos: ";
@@ -538,6 +555,7 @@ int main(int argc, char* argv[]){
 				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
+				campos = ReadHeader(&in,cant_campos);
 				in.close();
 
 				int pos ;
@@ -583,13 +601,163 @@ int main(int argc, char* argv[]){
 
 			}
 
-		}else if(opcion == '8'){
+		}else if(opcion == 8){
+			if(index)
+				index = false;
+			else
+				index = true;
+
+		}else if(opcion == 9){
+			string ingresado;				
+			stringstream ss;
+			stringstream ss2;
+			cout<<"Ingrese el nombre del archivo para re indexar los registros: ";
+			getline(cin,ingresado);
+			getline(cin,ingresado);
+			ss<<ingresado<<".bin";
+			ss2<<ingresado<<".in";
+			char* nombre_archivo2 = new char(ingresado.size() + 4);
+			char* nombre_archivo = new char(ingresado.size() + 5);
+			strcpy(nombre_archivo, ss.str().c_str());
+			strcpy(nombre_archivo2, ss2.str().c_str());
+			nombre_archivo[ingresado.size+4] = '\0';
+			nombre_archivo2[ingresado.size+3] = '\0';
+			fstream in(nombre_archivo, ios::in|ios::binary);
+			if(!in.is_open()){
+				printf("El archivo no existe \n");
+				in.close();
+			}else{								
+				int cant_campos;
+				int avail_list;
+				long int cant_registros;
+				vector <Data*> campos;
+				vector<Index*> indices;
+				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
+				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
+				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
+				campos = ReadHeader(&in,cant_campos);
+
+				fstream out(nombre_archivo2, ios_base::out|ios_base::binary);
+				for(int j = 0; j<cant_registros; j++){
+						char asterisco = 'x';
+						in.read(reinterpret_cast<char*>(&asterisco), sizeof(char));
+						in.seekp(-sizeof(char),ios_base::cur);
+						if(asterisco == '*'){
+							for(int i = 0; i<campos.size(); i++){
+								if(campos[i]->type == 1){
+									in.seekp(sizeof(int), ios_base::cur);
+								}else{
+									in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+								}
+							}
+						}else{
+							if(campos[0]->type == 1){
+								int dato;
+								int offset = in.tellg();
+								in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+								Index* indice = new Index;
+								indice->offset = offset;
+								indice->key = to_string(dato);
+								int cont = indices.size()/2;
+								if(cont==0){
+									indices.push_back(indice);
+								}else if (indices == 1){
+
+								}else{
+									indices.insert(indices.begin()+cont,indice);
+									while(true){									
+										if(stoi(indices[cont-1]->key)>stoi(indices[cont]->key)){
+											int temp_int = cont;
+											temp_int -= (cont/2);
+											Index* temp = indices[temp_int];
+											indices[temp_int] = indices[cont];
+											indices[cont] = temp;
+											cont = temp;
+										}else if(stoi(indices[cont+1]->key)<stoi(indices[cont]->key)){											
+											int temp_int = cont;
+											temp_int += (cont/2);
+											Index* temp = indices[temp_int];
+											indices[temp_int] = indices[cont];
+											indices[cont] = temp;
+											cont = temp;
+										}else{
+											break;
+										}
+									}
+								}
+
+							}else{
+
+								if(campos[0]->size == 1){
+									int offset;
+									char dato;
+									in.read(&dato,sizeof(char));
+								}else{
+									int offset;
+									char* dato = new char[campos[i]->size];
+									in.read(dato, campos[i]->size*sizeof(char));
+								}
+							}
+
+
+							for(int i = 1; i<campos.size(); i++){
+								if(campos[i]->type == 1)
+									in.seekp(sizeof(int),ios_base::cur);
+								else
+									in.seekp(campos[i]->size, ios_base::cur);
+							}
+							/*
+							//cout<<"Registro "<<(j+1)<<endl;
+							for(int i = 0; i<campos.size(); i++){			
+								if(campos[i]->type == 1){
+									int dato;
+									in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+									//cout<<campos[i]->name<<": "<<dato<<endl;
+								}else{
+									if(campos[i]->size == 1){
+										char dato;
+										in.read(&dato,sizeof(char));
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+									}else{
+										char* dato = new char[campos[i]->size];
+										in.read(dato, campos[i]->size*sizeof(char));
+
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+									}
+								}
+							}*/
+						}
+					}
+					in.close();	
+				/*in.close();
+				int offset = sizeof(int)*2 +sizeof(long int)+cant_campos*(sizeof(int)*2+15);
+
+				vector<Index*> indices;
+				fstream out(nombre_archivo2, ios_base::out|ios_base::binary);
+				if(campos[0]->type == 1){		
+					int pos_insertar;			
+					for(int i = 0; i<cant_registros; i++){
+						int posicion = campos.size()/2;
+						while(true){
+							if()
+						}
+					}
+				}else{
+
+				}*/
+				out.close();
+			}
+			
+
+			
+
+		}else if(opcion == 10){
 
 		}else{
 			cout<<"La opcion no es valida"<<endl;
 
 		}
-	}while(opcion != '8');
+	}while(opcion != 10);
 
 	return 0;
 }
