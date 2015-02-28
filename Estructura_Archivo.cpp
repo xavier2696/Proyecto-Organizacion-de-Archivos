@@ -332,13 +332,13 @@ int main(int argc, char* argv[]){
 				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
 				campos = ReadHeader(&in,cant_campos);
 
-				//cout<<"cant registros "<<cant_registros<<endl;
-				for(int j = 0; j<cant_registros; j++){
+				cout<<"cant registros "<<cant_registros<<endl;
+				for(int j = 0; j<cant_registros && in.good(); j++){
 					char asterisco = 'x';
 					in.read(reinterpret_cast<char*>(&asterisco), sizeof(char));
 					//cout<<asterisco<<endl;
 					in.seekp(-sizeof(char),ios_base::cur);
-					if(asterisco == '*'){
+					if(asterisco == '*' && avail_list!= 0 ){
 						//cout<<"*"<<endl;
 						j--;
 						for(int i = 0; i<campos.size(); i++){
@@ -350,7 +350,7 @@ int main(int argc, char* argv[]){
 						}
 					}else{
 
-						//cout<<"Registro "<<(j+1)<<endl;
+						cout<<"Registro "<<(j+1)<<endl;
 						for(int i = 0; i<campos.size(); i++){			
 							if(campos[i]->type == 1){
 								int dato;
@@ -451,6 +451,10 @@ int main(int argc, char* argv[]){
 			ss<<ingresado<<".bin";
 			char* nombre_archivo = new char(ingresado.size() + 5);
 			strcpy(nombre_archivo, ss.str().c_str());
+			stringstream ss2;
+			ss2<<ingresado<<".in";
+			char* nombre_archivo2 = new char(ingresado.size() + 4);
+			strcpy(nombre_archivo2, ss2.str().c_str());
 			fstream in(nombre_archivo, ios::in|ios::binary);
 			if(!in.is_open()){
 				printf("El archivo no existe \n");
@@ -464,6 +468,7 @@ int main(int argc, char* argv[]){
 				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
 				campos = ReadHeader(&in,cant_campos);
+				vector<Index*> indices = ReadIndex(nombre_archivo2,cant_registros,campos[0]);
 				in.close();
 				int offset = sizeof(int)*2 +sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 				int size_registro = 0;
@@ -479,6 +484,48 @@ int main(int argc, char* argv[]){
 						size_registro += sizeof(int);
 				}
 				offset += (pos-1)*size_registro;
+
+				ifstream in(nombre_archivo, ios::binary|ios::in);
+				in.seekg(offset,ios_base::beg);
+				char borrado ;
+				in.read(reinterpret_cast<char*>(&borrado),sizeof(char));
+				in.seekg(-sizeof(char),ios_base::cur);
+				while(borrado == '*'){
+					in.read(reinterpret_cast<char*>(&borrado),sizeof(char));
+					in.seekg(-sizeof(char)+size_registro,ios_base::cur);
+					offset+=size_registro;
+				}
+				if(index){
+					if(campos[0]->type == 1){
+						int dato;
+						in.read(reinterpret_cast<char*>(&dato),sizeof(int));
+						for(int i = 0; i<indices.size();i++){
+							if(atoi((indices[i]->key).c_str()) == dato){
+								indices.erase(indices.begin()+i);
+								break;
+							}
+						}
+					}else{
+
+					}
+					ofstream out(nombre_archivo2,ios_base::out|ios_base::binary);
+					char zero = '0';
+					char uno = '1';	
+					out.write(reinterpret_cast<char*>(&zero),sizeof(char));
+					for(int i = 0; i<indices.size(); i++){
+						if(campos[0]->type == 1){
+							int temp = atoi((indices[i]->key).c_str());
+							out.write(reinterpret_cast<char*>(&temp),sizeof(int));
+							out.write(reinterpret_cast<char*>(&(indices[i]->offset)),sizeof(int));
+						}else{
+
+						}
+					}
+					out.seekp(0,ios_base::beg);
+					out.write(reinterpret_cast<char*>(&uno),sizeof(char));
+					out.close();
+				}
+				in.close();
 				ofstream out(nombre_archivo, ios::out|ios::binary|ios::in);
 				out.seekp(offset,ios_base::beg);
 				char asterisco = '*';
