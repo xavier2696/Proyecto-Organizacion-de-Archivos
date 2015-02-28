@@ -16,27 +16,44 @@ struct Data{
 vector<Data*> ReadHeader(fstream* , int);
 
 int main(int argc, char* argv[]){
-	char opcion;
+	int opcion;
+	bool index = false;
 	do{
-		cout<<"Menu"<<endl 
-			<<"1)Definir estructura y guardar datos"<<endl 
+		cout<<"Menu"<<endl;
+
+		if(index){
+			cout<<"(Indices activados)"<<endl;
+		}
+		cout<<"1)Definir estructura y guardar datos"<<endl 
 			<<"2)Agregar datos a archivo"<<endl
 			<<"3)Listar datos de archivo"<<endl
 			<<"4)Buscar Registro"<<endl
 			<<"5)Borrar Registro"<<endl
 			<<"6)Compactar"<<endl
-			<<"7)Modificar Registro"<<endl
-			<<"8)Salir"<<endl
+			<<"7)Modificar Registro"<<endl;
+		if(index){
+			cout<<"8)Desactivar indices"<<endl;
+		}else{
+			cout<<"8)Activar indices"<<endl;
+		}
+		cout<<"9)Crear Arhivo indices"<<endl
+			<<"10)Salir"<<endl
 			<<"Ingrese su opcion: ";
 		cin>>opcion;
-		if(opcion == '1'){
+		if(opcion == 1){
 			//definicion de campos
 			int continuar;
 			vector<Data*> campos;
-
+			Data* borrado = new Data;
+			borrado->name = "borrado";
+			borrado->type = 2;
+			borrado->size = 1;
+			campos.push_back(borrado);
+			cout<<"El primer campo que ingrese es el campo llave"<<endl;
 			do{
 				Data* data = new Data;
 				char* nombre = new char[15];
+				
 				cout<<"Ingrese el nombre del campo: ";
 				cin>>nombre;
 				data->name = nombre;		
@@ -91,7 +108,7 @@ int main(int argc, char* argv[]){
 			out.close();
 
 
-			}else if( opcion == '2'){
+			}else if( opcion == 2){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para cargar datos: ";
@@ -120,8 +137,11 @@ int main(int argc, char* argv[]){
 					if(avail_list ==0){
 						ofstream out(nombre_archivo, ios::out|ios::binary|ios::app);
 						int continuar;
+
 						do{
-							for(int i = 0; i<campos.size(); i++){
+							char uno = '1';
+							out.write(reinterpret_cast<char*>(&uno), sizeof(char));
+							for(int i = 1; i<campos.size(); i++){
 								if(campos[i]->type == 1){
 									int dato;
 									cout<<campos[i]->name<<": ";
@@ -174,7 +194,9 @@ int main(int argc, char* argv[]){
 
 							offset += (avail_list-1)*size_registro;
 							out.seekp(offset, ios_base::beg);
-							for(int i = 0; i<campos.size(); i++){
+							char uno = '1';
+							out.write(reinterpret_cast<char*>(&uno), sizeof(char));
+							for(int i = 1; i<campos.size(); i++){
 								if(campos[i]->type == 1){
 									int dato;
 									cout<<campos[i]->name<<": ";
@@ -207,7 +229,7 @@ int main(int argc, char* argv[]){
 					//cant_registros++;
 							avail_list = disponible;
 
-
+							cant_registros++;
 							out.close();
 						}while(continuar == 1 && avail_list != 0);				
 
@@ -221,7 +243,7 @@ int main(int argc, char* argv[]){
 				
 				}
 
-			}else if(opcion == '3'){
+			}else if(opcion == 3){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para mostrar datos: ";
@@ -245,23 +267,25 @@ int main(int argc, char* argv[]){
 
 			//cout<<"cant registros "<<cant_registros<<endl;
 					for(int j = 0; j<cant_registros; j++){
-						char asterisco = 'x';
-						in.read(reinterpret_cast<char*>(&asterisco), sizeof(char));
+						char borrado;
+						in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
 				//cout<<asterisco<<endl;
-						in.seekp(-sizeof(char),ios_base::cur);
-						if(asterisco == '*'){
+						//in.seekp(-sizeof(char),ios_base::cur);
+						if(borrado == '0'){
 					//cout<<"*"<<endl;
-							for(int i = 0; i<campos.size(); i++){
+							for(int i = 1; i<campos.size(); i++){
 								if(campos[i]->type == 1){
 									in.seekp(sizeof(int), ios_base::cur);
 								}else{
 									in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
 								}
 							}
+							j--;
 						}else{
 
 							cout<<"Registro "<<(j+1)<<endl;
-							for(int i = 0; i<campos.size(); i++){			
+							for(int i = 1; i<campos.size(); i++){
+											
 								if(campos[i]->type == 1){
 									int dato;
 									in.read(reinterpret_cast<char*>(&dato), sizeof(int));
@@ -285,7 +309,7 @@ int main(int argc, char* argv[]){
 				}
 
 
-			}else if(opcion == '4'){
+			}else if(opcion == 4){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para mostrar los registros: ";
@@ -306,20 +330,20 @@ int main(int argc, char* argv[]){
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
-          campos = ReadHeader(&in,cant_campos);
+          			campos = ReadHeader(&in,cant_campos);
 					int pos;
 					do{
 						cout<<"Ingrese la posicion de registro que desea desplegar: ";
 						cin>>pos;
 					}while(pos<0 && pos>cant_registros);
 					int tam_registro = 0;
-					char asterisco = 'x';
-					in.read(reinterpret_cast<char*>(&asterisco), sizeof(char));
+					char borrado;
+					in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
 			//cout<<asterisco<<endl;
 
-					in.seekp(-sizeof(char),ios_base::cur);
+					//in.seekp(-sizeof(char),ios_base::cur);
 
-					if(asterisco == '*'){
+					if(borrado == '0'){
 						cout<<"Esa posicion fue borrada. Por favor seleccione otra."<<endl;
 					}else{
 						for(int i = 0; i<campos.size(); i++){
@@ -329,8 +353,8 @@ int main(int argc, char* argv[]){
 								tam_registro+= campos[i]->size;
 							}
 						}
-						in.seekp((pos-1)*tam_registro,ios_base::cur);
-						for(int i = 0; i<campos.size(); i++){			
+						in.seekp((pos-1)*tam_registro +1,ios_base::cur);
+						for(int i = 1; i<campos.size(); i++){			
 							if(campos[i]->type == 1){
 								int dato;
 								in.read(reinterpret_cast<char*>(&dato), sizeof(int));
@@ -352,7 +376,7 @@ int main(int argc, char* argv[]){
 
 				}	
 
-			}else if(opcion == '5'){
+			}else if(opcion == 5){
 				string ingresado;				
 				stringstream ss;
 				cout<<"Ingrese el nombre del archivo para borrar el registro: ";
@@ -372,7 +396,7 @@ int main(int argc, char* argv[]){
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
-          campos = ReadHeader(&in,cant_campos);
+          			campos = ReadHeader(&in,cant_campos);
 					in.close();
 					int offset = sizeof(int)*2 +sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 					int size_registro = 0;
@@ -390,19 +414,20 @@ int main(int argc, char* argv[]){
 					offset += (pos-1)*size_registro;
 					ofstream out(nombre_archivo, ios::out|ios::binary|ios::in);
 					out.seekp(offset,ios_base::beg);
-					char asterisco = '*';
-					out.write(reinterpret_cast<char*>(&asterisco),sizeof(char));
+					char borrado = '0';
+					out.write(reinterpret_cast<char*>(&borrado),sizeof(char));
 					out.write(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					avail_list = pos;
 					out.close();
-
+					cant_registros--;
 					fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
 					out2.seekp(sizeof(int), ios_base::beg);
-				out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//avail list
+					out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//avail list
+					out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));
 				out2.close();
 
 			}
-		}else if(opcion == '6'){
+		}else if(opcion == 6){
 			string ingresado;				
 			stringstream ss;
 			stringstream ss2;
@@ -461,11 +486,11 @@ int main(int argc, char* argv[]){
 				long int registros_temp = cant_registros;
 			//cout<<"cant registros "<<cant_registros<<endl;
 				for(int j = 0; j<cant_registros; j++){
-					char asterisco = 'x';
-					in.read(reinterpret_cast<char*>(&asterisco), sizeof(char));
+					char borrado;
+					in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
 				//cout<<asterisco<<endl;
 					in.seekp(-sizeof(char),ios_base::cur);
-					if(asterisco == '*'){
+					if(borrado == '0'){
 						registros_temp--;
 					//cout<<"*"<<endl;
 						for(int i = 0; i<campos.size(); i++){
@@ -516,7 +541,7 @@ int main(int argc, char* argv[]){
 				out2.write(reinterpret_cast<char*>(&registros_temp), sizeof(long int));//cant registros
 				out2.close();
 			}
-		}else if(opcion == '7'){
+		}else if(opcion == 7){
 			string ingresado;				
 			stringstream ss;
 			cout<<"Ingrese el nombre del archivo para modificar datos: ";
@@ -557,8 +582,8 @@ int main(int argc, char* argv[]){
 				int offset = sizeof(int)*2+sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 
 				offset += (pos-1)*size_registro;
-				out.seekp(offset, ios_base::beg);
-				for(int i = 0; i<campos.size(); i++){
+				out.seekp(offset+sizeof(char), ios_base::beg);
+				for(int i = 1; i<campos.size(); i++){
 					if(campos[i]->type == 1){
 						int dato;
 						cout<<campos[i]->name<<": ";
@@ -583,13 +608,19 @@ int main(int argc, char* argv[]){
 
 			}
 
-		}else if(opcion == '8'){
+		}else if(opcion == 8){
+
+		}else if(opcion == 9){
+
+		}else if (opcion == 10){
 
 		}else{
 			cout<<"La opcion no es valida"<<endl;
+		
+		
 
 		}
-	}while(opcion != '8');
+	}while(opcion != 10);
 
 	return 0;
 }
