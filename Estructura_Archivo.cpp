@@ -5,6 +5,7 @@
 #include <sstream>
 #include <string>
 #include <stdlib.h>
+#include <map>
 using namespace std;
 
 struct Data{
@@ -14,6 +15,7 @@ struct Data{
 };
 
 vector<Data*> ReadHeader(fstream* , int);
+bool ReadIndex(map<string,int>* ,char* ,long int , int , int);
 
 int main(int argc, char* argv[]){
 	int opcion;
@@ -117,7 +119,11 @@ int main(int argc, char* argv[]){
 				ss<<ingresado<<".bin";
 				char* nombre_archivo = new char(ingresado.size() + 5);
 				strcpy(nombre_archivo, ss.str().c_str());
-
+				stringstream ss2;
+				ss2<<ingresado<<".in";
+				char* nombre_archivo2 = new char(ingresado.size() + 4);
+				strcpy(nombre_archivo2, ss2.str().c_str());
+				nombre_archivo2[ingresado.size()+3] = '\0';
 
 				fstream in(nombre_archivo, ios::in|ios::binary);
 				if(!in.is_open()){
@@ -128,12 +134,17 @@ int main(int argc, char* argv[]){
 					int avail_list;
 					long int cant_registros;
 					vector<Data*> campos;
+					map<string,int> indices;
 					in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           			campos = ReadHeader(&in,cant_campos);
 					in.close();
 					int disponible = avail_list;
+
+					
+					string dato2;
+					int offset;
 					if(avail_list ==0){
 						ofstream out(nombre_archivo, ios::out|ios::binary|ios::app);
 						int continuar;
@@ -146,17 +157,27 @@ int main(int argc, char* argv[]){
 									int dato;
 									cout<<campos[i]->name<<": ";
 									cin>>dato;
+									stringstream ss;
+									ss<<dato;
+									dato2 = ss.str();
+									offset = out.tellg();
 									out.write(reinterpret_cast<char*>(&dato), sizeof(int));
 								}else{
 									if(campos[i]->size == 1){
 										char dato;
 										cout<<campos[i]->name<<": ";
 										cin>>dato;
+										stringstream ss;
+										ss<<dato;
+										dato2 = ss.str();
+										offset = out.tellg();
 										out.write(reinterpret_cast<char*>(&dato),sizeof(char));
 									}else{
 										char* dato = new char[campos[i]->size];
 										cout<<campos[i]->name<<": ";
 										cin>>dato;
+										dato2 = string(dato);
+										offset = out.tellg();
 										for(int j = 0; j<campos[i]->size*sizeof(char); j++){
 											out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
 										}
@@ -164,10 +185,22 @@ int main(int argc, char* argv[]){
 								}
 							}
 							cant_registros++;
+
+							if(index){
+								if (!ReadIndex(&indices,nombre_archivo2,cant_registros, campos[1]->type, campos[1]->type)){
+									cout<<"El archivo de indices no esta actualizado o no se guardo correctamente."<<endl
+										<<"Porfavor reindexe el archivo antes de continuar"<<endl;
+									break;
+								}else{
+									indices.insert(pair<string,int>(dato2,offset));
+								}
+							}
+
 							cout<<"Ingrese 1 para ingresar otro registro: ";
 							cin>>continuar;
 						}while(continuar == 1);				
 						out.close();
+
 					}else{				
 
 						int size_registro = 0;
@@ -201,18 +234,27 @@ int main(int argc, char* argv[]){
 									int dato;
 									cout<<campos[i]->name<<": ";
 									cin>>dato;
-							//cin>>dato;
+									stringstream ss;
+									ss<<dato;
+									dato2 = ss.str();
+									offset = out.tellg();
 									out.write(reinterpret_cast<char*>(&dato), sizeof(int));
 								}else{
 									if(campos[i]->size == 1){
 										char dato;
 										cout<<campos[i]->name<<": ";
 										cin>>dato;
+										stringstream ss;
+										ss<<dato;
+										dato2 = ss.str();
+										offset = out.tellg();
 										out.write(reinterpret_cast<char*>(&dato),sizeof(char));
 									}else{
 										char* dato = new char[campos[i]->size];
 										cout<<campos[i]->name<<": ";
 										cin>>dato;
+										dato2 = string(dato);
+										offset = out.tellg();
 										for(int j = 0; j<campos[i]->size*sizeof(char); j++){
 											out.write(reinterpret_cast<char*>(&(dato[j])),sizeof(char));
 										}
@@ -230,6 +272,17 @@ int main(int argc, char* argv[]){
 							avail_list = disponible;
 
 							cant_registros++;
+
+							if(index){
+								if (!ReadIndex(&indices,nombre_archivo2,cant_registros, campos[1]->type, campos[1]->type)){
+									cout<<"El archivo de indices no esta actualizado o no se guardo correctamente."<<endl
+										<<"Porfavor reindexe el archivo antes de continuar."<<endl;
+									break;
+								}else{
+									indices.insert(pair<string,int>(dato2,offset));
+								}
+							}
+
 							out.close();
 						}while(continuar == 1 && avail_list != 0);				
 
@@ -265,14 +318,10 @@ int main(int argc, char* argv[]){
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           			campos = ReadHeader(&in,cant_campos);
 
-			//cout<<"cant registros "<<cant_registros<<endl;
 					for(int j = 0; j<cant_registros; j++){
 						char borrado;
 						in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
-				//cout<<asterisco<<endl;
-						//in.seekp(-sizeof(char),ios_base::cur);
 						if(borrado == '0'){
-					//cout<<"*"<<endl;
 							for(int i = 1; i<campos.size(); i++){
 								if(campos[i]->type == 1){
 									in.seekp(sizeof(int), ios_base::cur);
@@ -609,9 +658,125 @@ int main(int argc, char* argv[]){
 			}
 
 		}else if(opcion == 8){
-
+			if(index)
+				index = false;
+			else
+				index = true;
 		}else if(opcion == 9){
+			string ingresado;
+			stringstream ss;
+			stringstream ss2;
+			cout<<"Ingrese el nombre del archivo para re indexar los registros: ";
+			getline(cin,ingresado);
+			getline(cin,ingresado);
+			ss<<ingresado<<".bin";
+			ss2<<ingresado<<".in";
+			char* nombre_archivo2 = new char(ingresado.size() + 4);
+			char* nombre_archivo = new char(ingresado.size() + 5);
+			strcpy(nombre_archivo, ss.str().c_str());
+			strcpy(nombre_archivo2, ss2.str().c_str());
+			nombre_archivo[ingresado.size()+4] = '\0';
+			nombre_archivo2[ingresado.size()+3] = '\0';
+			fstream in(nombre_archivo, ios::in|ios::binary);
+			if(!in.is_open()){
+				printf("El archivo no existe \n");
+				in.close();
+			}else{ 
+				int cant_campos;
+				int avail_list;
+				long int cant_registros;
+				vector <Data*> campos;
+				map<string,int> indices;
+				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
+				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
+				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
+				campos = ReadHeader(&in,cant_campos);
+				fstream out(nombre_archivo2, ios_base::out|ios_base::binary);
+				char terminado = '0';
+				out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
+				out.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));
+				for(int j = 0; j<cant_registros; j++){
+						char borrado;
+						in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
+						if(borrado == '0'){
+							for(int i = 1; i<campos.size(); i++){
+								if(campos[i]->type == 1){
+									in.seekp(sizeof(int), ios_base::cur);
+								}else{
+									in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+								}
+							}
+							j--;
+						}else{
 
+							//for(int i = 1; i<campos.size(); i++){
+											
+								if(campos[1]->type == 1){
+									int dato;
+									int offset = in.tellg();
+									in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+									stringstream ss;
+									ss<<dato;
+									string key = ss.str();
+
+									indices.insert ( pair<string,int>(key,offset) );
+								}else{
+									if(campos[1]->size == 1){
+										char dato;
+										int offset = in.tellg();
+										in.read(&dato,sizeof(char));
+										stringstream ss;
+										ss<<dato;
+										string key = ss.str();
+										indices.insert ( pair<string,int>(key,offset) );
+									}else{
+										char* dato = new char[campos[1]->size];
+										int offset = in.tellg();
+										in.read(dato, campos[1]->size*sizeof(char));
+										string key = string(dato);
+										indices.insert ( pair<string,int>(key,offset) );
+									}
+								}
+								for(int i = 2; i<campos.size(); i++){
+								if(campos[i]->type == 1){
+									in.seekp(sizeof(int), ios_base::cur);
+								}else{
+									in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+								}
+
+								}
+							//}
+						}
+					}
+					in.close();
+					typedef map<string, int>::const_iterator MapIterator;
+					for (MapIterator x = indices.begin(); x != indices.end(); x++) {
+    					//cout << x->first << ": " << x->second << '\n';
+    					if(campos[1]->type == 1){
+    						int key = atoi((x->first).c_str());
+    						int offset = x->second;
+    						out.write(reinterpret_cast<char*>(&key), sizeof(int));
+    						out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+    					}else{
+    						if(campos[1]->size == 1){
+    							char key = (x->first)[0];
+    							char offset = x->second;
+    							out.write(reinterpret_cast<char*>(&key), sizeof(char));
+    							out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+    						}else{
+    							char* key = new char[campos[1]->size];
+    							strcpy(key,(x->first).c_str());
+    							char offset = x->second;
+    							out.write(key, sizeof(char)*campos[1]->size);
+    							out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+    						}
+    					}
+ 				 	}
+				out.seekg(0,ios_base::beg);
+				terminado = '1';
+				out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
+				out.close();
+			}
 		}else if (opcion == 10){
 
 		}else{
@@ -625,29 +790,168 @@ int main(int argc, char* argv[]){
 	return 0;
 }
 
-  vector<Data*> ReadHeader(fstream* in, int cant_campos){
-    vector<Data*> campos;
+vector<Data*> ReadHeader(fstream* in, int cant_campos){
+	vector<Data*> campos;
 
-    for(int i = 0; i<cant_campos; i++){
-      Data* data = new Data;
-      char* nombre = new char[15];
-      int tipo;
-      int size;
-      in->read(nombre,sizeof(char)*15);
-      nombre[14] = '\0';
-      in->read(reinterpret_cast<char*>(&tipo),sizeof(int));
-      in->read(reinterpret_cast<char*>(&size),sizeof(int));
-      data->type = tipo;
-      data->size = size;
-      data->name = nombre;
-      for(int i = 0; i<15; i++){
-        nombre[i] = '\0';
-      }
+	for(int i = 0; i<cant_campos; i++){
+		Data* data = new Data;
+		char* nombre = new char[15];
+		int tipo;
+		int size;
+		in->read(nombre,sizeof(char)*15);
+		nombre[14] = '\0';
+		in->read(reinterpret_cast<char*>(&tipo),sizeof(int));
+		in->read(reinterpret_cast<char*>(&size),sizeof(int));
+		data->type = tipo;
+		data->size = size;
+		data->name = nombre;
+		for(int i = 0; i<15; i++){
+			nombre[i] = '\0';
+		}
+		campos.push_back(data);
 
+	}
+	return campos;
+}
 
+bool ReadIndex(map<string,int>* indices,char* name,long int cant_registros, int key_type, int key_size){
+	ifstream in (name,ios_base::in|ios_base::binary);
+	if(!in.is_open()){
+		return false;
+	}else{
+		char terminado;
+		in.read(reinterpret_cast<char*>(&terminado),sizeof(char));
+		long int registros_map;
+		in.read(reinterpret_cast<char*>(&registros_map),sizeof(long int));
+		if(terminado == '0'||cant_registros != registros_map){
+			return false;
+		}
+		for(int i = 0; i<registros_map; i++){
+			if(key_type == 1){
+				int key ;
+    			int offset;    			
+    			in.read(reinterpret_cast<char*>(&key), sizeof(int));
+    			in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+    			stringstream ss;
+				ss<<key;
+    			indices->insert(pair<string,int>(ss.str(),offset));
+			}else{
+				if(key_size == 1){
+					char key;
+    				char offset;
+    				in.read(reinterpret_cast<char*>(&key), sizeof(char));
+    				in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+    				stringstream ss;
+					ss<<key;
+    				indices->insert(pair<string,int>(ss.str(),offset));
+				}else{
+					//char* key = new char[key_size];
+					char* key;
+    				char offset;
+    				in.read(key, sizeof(char)*key_size);
+    				in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+    				indices->insert(pair<string,int>(key,offset));
+				}
+			}
+		}
+	}
+	in.close();
+	return true;
+}
 
-      campos.push_back(data);
+void Reindexar(ifstream* in,char* nombre_archivo2){
+	int cant_campos;
+	int avail_list;
+	long int cant_registros;
+	vector <Data*> campos;
+	map<string,int> indices;
+	in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
+	in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
+	in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
+	campos = ReadHeader(&in,cant_campos);
+	fstream out(nombre_archivo2, ios_base::out|ios_base::binary);
+	char terminado = '0';
+	out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
+	out.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));
+	for(int j = 0; j<cant_registros; j++){
+		char borrado;
+		in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
+		if(borrado == '0'){
+			for(int i = 1; i<campos.size(); i++){
+				if(campos[i]->type == 1){
+					in.seekp(sizeof(int), ios_base::cur);
+				}else{
+					in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+				}
+			}
+			j--;
+		}else{
 
-    }
-    return campos;
-  }
+							//for(int i = 1; i<campos.size(); i++){
+
+			if(campos[1]->type == 1){
+				int dato;
+				int offset = in.tellg();
+				in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+				stringstream ss;
+				ss<<dato;
+				string key = ss.str();
+
+				indices.insert ( pair<string,int>(key,offset) );
+			}else{
+				if(campos[1]->size == 1){
+					char dato;
+					int offset = in.tellg();
+					in.read(&dato,sizeof(char));
+					stringstream ss;
+					ss<<dato;
+					string key = ss.str();
+					indices.insert ( pair<string,int>(key,offset) );
+				}else{
+					char* dato = new char[campos[1]->size];
+					int offset = in.tellg();
+					in.read(dato, campos[1]->size*sizeof(char));
+					string key = string(dato);
+					indices.insert ( pair<string,int>(key,offset) );
+				}
+			}
+			for(int i = 2; i<campos.size(); i++){
+				if(campos[i]->type == 1){
+					in.seekp(sizeof(int), ios_base::cur);
+				}else{
+					in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+				}
+
+			}
+							//}
+		}
+	}
+	in.close();
+	typedef map<string, int>::const_iterator MapIterator;
+	for (MapIterator x = indices.begin(); x != indices.end(); x++) {
+    					//cout << x->first << ": " << x->second << '\n';
+		if(campos[1]->type == 1){
+			int key = atoi((x->first).c_str());
+			int offset = x->second;
+			out.write(reinterpret_cast<char*>(&key), sizeof(int));
+			out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+		}else{
+			if(campos[1]->size == 1){
+				char key = (x->first)[0];
+				char offset = x->second;
+				out.write(reinterpret_cast<char*>(&key), sizeof(char));
+				out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+			}else{
+				char* key = new char[campos[1]->size];
+				strcpy(key,(x->first).c_str());
+				char offset = x->second;
+				out.write(key, sizeof(char)*campos[1]->size);
+				out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+			}
+		}
+	}
+	out.seekg(0,ios_base::beg);
+	terminado = '1';
+	out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
+	out.close();
+}
