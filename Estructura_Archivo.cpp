@@ -6,6 +6,7 @@
 #include <string>
 #include <stdlib.h>
 #include <map>
+#include <stdexcept> 
 using namespace std;
 
 struct Data{
@@ -434,8 +435,11 @@ int main(int argc, char* argv[]){
 						for (MapIterator x = indices1.begin(); x != indices1.end(); x++) {
 							cout << x->first << ": " << x->second << '\n';
 						}*/
+							int cont = 1;
 							for (MapIterator2 x = indices.begin(); x != indices.end(); x++) {
 								in.seekg(x->second+1,ios_base::beg);
+								cout<<"Registro "<<cont<<endl;
+								cont++;
 								for(int i = 1; i<campos.size(); i++){
 									if(campos[i]->type == 1){
 										int dato;
@@ -471,6 +475,11 @@ int main(int argc, char* argv[]){
 				ss<<ingresado<<".bin";
 				char* nombre_archivo = new char(ingresado.size() + 5);
 				strcpy(nombre_archivo, ss.str().c_str());
+				stringstream ss2;
+          		ss2<<ingresado<<".in";
+          		char* nombre_archivo2 = new char(ingresado.size() + 4);
+          		strcpy(nombre_archivo2, ss2.str().c_str());
+          		nombre_archivo2[ingresado.size()+3] = '\0';
 				fstream in(nombre_archivo, ios::in|ios::binary);
 				if(!in.is_open()){
 					printf("El archivo no existe \n");
@@ -484,29 +493,84 @@ int main(int argc, char* argv[]){
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           			campos = ReadHeader(&in,cant_campos);
-					int pos;
-					do{
-						cout<<"Ingrese la posicion de registro que desea desplegar: ";
-						cin>>pos;
-					}while(pos<0 && pos>cant_registros);
+					string key;
+					cout<<"Ingrese la llave de registro que desea desplegar: ";
+					cin>>key;
 					int tam_registro = 0;
+					for(int i = 0; i<campos.size(); i++){
+						if(campos[i]->type == 1){
+							tam_registro+= sizeof(int);
+						}else{
+							tam_registro+= campos[i]->size;
+						}
+					}
 					char borrado;
-					in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
-			//cout<<asterisco<<endl;
-
-					//in.seekp(-sizeof(char),ios_base::cur);
-
-					if(borrado == '0'){
-						cout<<"Esa posicion fue borrada. Por favor seleccione otra."<<endl;
-					}else{
-						for(int i = 0; i<campos.size(); i++){
-							if(campos[i]->type == 1){
-								tam_registro+= sizeof(int);
+					int posicion = -1;
+					if(!index){
+						for(int i = 0; i<cant_registros; i++){
+							in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
+							if(borrado == '0'){
+								in.seekp(tam_registro, ios_base::cur);
 							}else{
-								tam_registro+= campos[i]->size;
+								if(campos[1]->type == 1){
+									int dato;
+									in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+									stringstream ss;
+									ss<<dato;
+									if(ss.str() == key){
+										posicion = in.tellg();
+										posicion -= sizeof(int);
+										break;
+									}
+								}else{
+									if(campos[1]->size == 1){
+										char dato;
+										in.read(reinterpret_cast<char*>(&dato), sizeof(char));
+										stringstream ss;
+										ss<<dato;
+										if(ss.str() == key){
+											posicion = in.tellg();
+											posicion -= sizeof(char);
+											break;
+										}
+									}else{
+										char* dato;
+										in.read(dato,sizeof(char)*campos[1]->size);
+										string ss = string(dato);
+										if(dato == key){
+											posicion = in.tellg();
+											posicion -= sizeof(char)*campos[1]->size;
+											break;
+										}
+									}
+								}
+							}
+							for(int i = 2; i<campos.size(); i++){
+								if(campos[i]->type == 1){
+									in.seekp(sizeof(int),ios_base::cur);
+								}else{
+									in.seekp(sizeof(char)*campos[i]->size,ios_base::cur);
+								}
 							}
 						}
-						in.seekp((pos-1)*tam_registro +1,ios_base::cur);
+					}else{
+						map<string,int> indices;
+						if (!ReadIndex(&indices,nombre_archivo2,cant_registros, campos[1]->type, campos[1]->type)){
+							cout<<"El archivo de indices no esta actualizado o no se guardo correctamente."<<endl
+							<<"Porfavor reindexe el archivo antes de continuar"<<endl;
+						}else{
+							try{
+								posicion = indices.at(key);
+								posicion++;
+							}catch(const std::out_of_range& oor){
+								posicion = -1;
+							}
+						}
+					}
+					if(posicion == -1){
+						cout<<"No se encontro un registro con esa llave"<<endl;
+					}else{
+						in.seekp(posicion,ios_base::beg);
 						for(int i = 1; i<campos.size(); i++){			
 							if(campos[i]->type == 1){
 								int dato;
@@ -526,6 +590,7 @@ int main(int argc, char* argv[]){
 							}
 						}
 					}
+			
 
 				}	
 
@@ -538,6 +603,11 @@ int main(int argc, char* argv[]){
 				ss<<ingresado<<".bin";
 				char* nombre_archivo = new char(ingresado.size() + 5);
 				strcpy(nombre_archivo, ss.str().c_str());
+				stringstream ss2;
+          		ss2<<ingresado<<".in";
+          		char* nombre_archivo2 = new char(ingresado.size() + 4);
+          		strcpy(nombre_archivo2, ss2.str().c_str());
+          		nombre_archivo2[ingresado.size()+3] = '\0';
 				fstream in(nombre_archivo, ios::in|ios::binary);
 				if(!in.is_open()){
 					printf("El archivo no existe \n");
@@ -550,7 +620,7 @@ int main(int argc, char* argv[]){
 					in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 					in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
           			campos = ReadHeader(&in,cant_campos);
-					in.close();
+					
 					int offset = sizeof(int)*2 +sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 					int size_registro = 0;
 					int pos;
@@ -566,18 +636,89 @@ int main(int argc, char* argv[]){
 					}
 					offset += (pos-1)*size_registro;
 					ofstream out(nombre_archivo, ios::out|ios::binary|ios::in);
-					out.seekp(offset,ios_base::beg);
+					out.seekp(offset,ios_base::beg);					
 					char borrado = '0';
-					out.write(reinterpret_cast<char*>(&borrado),sizeof(char));
-					out.write(reinterpret_cast<char*>(&avail_list),sizeof(int));
-					avail_list = pos;
-					out.close();
-					cant_registros--;
-					fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
-					out2.seekp(sizeof(int), ios_base::beg);
-					out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//avail list
-					out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));
-				out2.close();
+					bool borrado_permitido = true;
+					if(index){
+						map<string,int> indices;
+						if (!ReadIndex(&indices,nombre_archivo2,cant_registros, campos[1]->type, campos[1]->type)){
+							cout<<"El archivo de indices no esta actualizado o no se guardo correctamente."<<endl
+							<<"Porfavor reindexe el archivo antes de continuar"<<endl;
+							borrado_permitido = false;
+						}else{
+							in.seekg(offset+1,ios_base::beg);
+							string key_borrar;
+							if(campos[1]->type == 1){
+								int dato;
+								in.read(reinterpret_cast<char*>(&dato),sizeof(int));
+								stringstream ss;
+								ss<<dato;
+								key_borrar = ss.str();
+							}else{
+								if(campos[1]->size == 1){
+									char dato;
+									in.read(reinterpret_cast<char*>(&dato),sizeof(char));
+									stringstream ss;
+									ss<<dato;
+									key_borrar = ss.str();
+								}else{
+									char* dato;
+									in.read(reinterpret_cast<char*>(&dato),sizeof(char)*campos[1]->size);
+									key_borrar = dato;
+								}
+							}
+							indices.erase(key_borrar);
+							fstream out(nombre_archivo2, ios_base::out|ios_base::binary);
+							char terminado = '0';
+							cant_registros--;
+							out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
+							out.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));
+							typedef map<string, int>::const_iterator MapIterator;
+							for (MapIterator x = indices.begin(); x != indices.end(); x++) {
+    						//cout << x->first << ": " << x->second << '\n';
+								if(campos[1]->type == 1){
+									int key = atoi((x->first).c_str());
+									int offset = x->second;
+									out.write(reinterpret_cast<char*>(&key), sizeof(int));
+									out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+								}else{
+									if(campos[1]->size == 1){
+										char key = (x->first)[0];
+										char offset = x->second;
+										out.write(reinterpret_cast<char*>(&key), sizeof(char));
+										out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+									}else{
+										char* key = new char[campos[1]->size];
+										strcpy(key,(x->first).c_str());
+										char offset = x->second;
+										out.write(key, sizeof(char)*campos[1]->size);
+										out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+									}
+								}
+							}
+							out.seekg(0,ios_base::beg);
+							terminado = '1';
+							out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
+							out.close();
+						}
+						
+
+					}
+					in.close();
+					if(borrado_permitido){
+						out.write(reinterpret_cast<char*>(&borrado),sizeof(char));
+						out.write(reinterpret_cast<char*>(&avail_list),sizeof(int));
+						avail_list = pos;
+						out.close();
+						if(!index)
+							cant_registros--;
+						fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
+						out2.seekp(sizeof(int), ios_base::beg);
+						out2.write(reinterpret_cast<char*>(&avail_list), sizeof(int));//avail list
+						out2.write(reinterpret_cast<char*>(&cant_registros), sizeof(long int));
+						out2.close();
+					}
+				
 
 			}
 		}else if(opcion == 6){
