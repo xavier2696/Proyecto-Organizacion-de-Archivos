@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <map>
 #include <stdexcept> 
+#include <iomanip>
 using namespace std;
 
 struct Data{
@@ -405,6 +406,23 @@ int main(int argc, char* argv[]){
 				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
 				in.read(reinterpret_cast<char*>(&cant_registros),sizeof(long int));
 				campos = ReadHeader(&in,cant_campos);
+				int sizeint = 10;
+				for(int k = 1; k<campos.size(); k++){
+					if(campos[k]->type == 1){
+						if(k == 1)
+							cout<<setw(sizeint+19)<<right<<campos[k]->name;
+						else
+							cout<<setw(sizeint)<<campos[k]->name;
+						//cout<<campos[i]->name;
+					}else{
+						if(k == 1)
+							cout<<setw(campos[k]->size+15+19)<<campos[k]->name;
+						else
+							cout<<setw(campos[k]->size+15)<<campos[k]->name;
+						//cout<<campos[i]->name;
+					}
+				}
+				cout<<endl;
 				if(!index){
 					for(int j = 0; j<cant_registros; j++){
 						char borrado;
@@ -420,27 +438,31 @@ int main(int argc, char* argv[]){
 							j--;
 						}else{
 
-							cout<<"Registro "<<(j+1)<<endl;
+							cout<<"Registro "<<setw(10)<<left<<(j+1);
 							for(int i = 1; i<campos.size(); i++){
 
 								if(campos[i]->type == 1){
 									int dato;
 									in.read(reinterpret_cast<char*>(&dato), sizeof(int));
-									cout<<campos[i]->name<<": "<<dato<<endl;
+									//cout<<campos[i]->name<<": "<<dato<<endl;
+									cout<<setw(sizeint)<<right<<dato;
 								}else{
 									if(campos[i]->size == 1){
 										char dato;
 										in.read(&dato,sizeof(char));
-										cout<<campos[i]->name<<": "<<dato<<endl;
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+										cout<<setw(campos[i]->size+15)<<right<<dato;
 									}else{
 										char* dato = new char[campos[i]->size];
 										in.read(dato, campos[i]->size*sizeof(char));
 
-										cout<<campos[i]->name<<": "<<dato<<endl;
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+										cout<<setw(campos[i]->size+15)<<right<<dato;
 									}
 								}
+								
 							}
-
+							cout<<endl;
 						}
 					}
 				}else{
@@ -465,26 +487,29 @@ int main(int argc, char* argv[]){
 						int cont = 1;
 						for (MapIterator2 x = indices.begin(); x != indices.end(); x++) {
 							in.seekg(x->second+1,ios_base::beg);
-							cout<<"Registro "<<cont<<endl;
+							cout<<"Registro "<<setw(10)<<left<<cont;
 							cont++;
 							for(int i = 1; i<campos.size(); i++){
 								if(campos[i]->type == 1){
 									int dato;
 									in.read(reinterpret_cast<char*>(&dato), sizeof(int));
-									cout<<campos[i]->name<<": "<<dato<<endl;
+									//cout<<campos[i]->name<<": "<<dato<<endl;
+									cout<<setw(sizeint)<<right<<dato;
 								}else{
 									if(campos[i]->size == 1){
 										char dato;
 										in.read(&dato,sizeof(char));
-										cout<<campos[i]->name<<": "<<dato<<endl;
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+										cout<<setw(campos[i]->size+15)<<right<<dato;
 									}else{
 										char* dato = new char[campos[i]->size];
 										in.read(dato, campos[i]->size*sizeof(char));
-
-										cout<<campos[i]->name<<": "<<dato<<endl;
+										cout<<setw(campos[i]->size+15)<<right<<dato;
+										//cout<<campos[i]->name<<": "<<dato<<endl;
 									}
 								}
 							}
+							cout<<endl;
 						}
 
 					}
