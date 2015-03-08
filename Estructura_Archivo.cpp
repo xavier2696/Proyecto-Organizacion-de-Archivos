@@ -464,6 +464,13 @@ int main(int argc, char* argv[]){
 							}
 							cout<<endl;
 						}
+						if(j%10 == 0 && j!=0){
+							char respuesta2;
+							cout<<"Ingrese 1 para ver 10 registros mas: ";
+							cin>>respuesta2;
+							if(respuesta2 != '1')
+								break;
+						}
 					}
 				}else{
 					map<string,int> indices1;
@@ -510,6 +517,13 @@ int main(int argc, char* argv[]){
 								}
 							}
 							cout<<endl;
+							if(cont%10 == 0 && cont!=0){
+								char respuesta2;
+								cout<<"Ingrese 1 para ver 10 registros mas: ";
+								cin>>respuesta2;
+								if(respuesta2 != '1')
+									break;
+							}
 						}
 
 					}
