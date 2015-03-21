@@ -8,12 +8,26 @@
 #include <map>
 #include <stdexcept> 
 #include <iomanip>
+#include <list>
 using namespace std;
+
+int tree_order = 16;
 
 struct Data{
 	string name;
 	int type;
 	int size;
+};
+
+struct Key_Offset{
+	string key;
+	int offset;
+};
+
+struct Node{
+	int cant_key;
+	list<Key_Offset> llaves;
+	list<int> hijos;
 };
 
 vector<Data*> ReadHeader(fstream* , int);
@@ -46,16 +60,18 @@ int main(int argc, char* argv[]){
 				<<"9)Salir"<<endl
 				<<"Ingrese su opcion: ";
 			cin>>opcion;
-		}
-		iniciado = true;
+		}		
 		if(opcion == '1'){				
 			stringstream ss;
 			cout<<"Ingrese el nombre del archivo: ";
 			getline(cin,ingresado);
+			if(iniciado)
+				getline(cin,ingresado);
 			ss<<ingresado<<".bin";
 			nombre_archivo = new char(ingresado.size() + 5);
 			strcpy(nombre_archivo, ss.str().c_str());
 			fstream in(nombre_archivo, ios::binary|ios::in);
+			campos.clear();
 			if(in.is_open()){
 				in.read(reinterpret_cast<char*>(&cant_campos),sizeof(int));
 				in.read(reinterpret_cast<char*>(&avail_list),sizeof(int));
@@ -444,43 +460,81 @@ int main(int argc, char* argv[]){
 				strcpy(nombre_archivo2, ss2.str().c_str());
 				nombre_archivo2[ingresado.size()+3] = '\0';
 				typedef map<string, int>::const_iterator MapIterator;
-				for (MapIterator x = indices.begin(); x != indices.end(); x++) {
-					indices1.insert(pair<int,int>(atoi((x->first).c_str()),x->second));
+				if(campos[1]->type == 1){
+					for (MapIterator x = indices.begin(); x != indices.end(); x++) {
+						indices1.insert(pair<int,int>(atoi((x->first).c_str()),x->second));
 
+					}
 				}
 				typedef map<int, int>::const_iterator MapIterator2;
 				int cont = 1;
-				for (MapIterator2 x = indices1.begin(); x != indices1.end(); x++) {
-					in.seekg(x->second+1,ios_base::beg);
-					cout<<"Registro "<<setw(10)<<left<<cont;
-					cont++;
-					for(int i = 1; i<campos.size(); i++){
-						if(campos[i]->type == 1){
-							int dato;
-							in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+				if(campos[1]->type == 1){
+					for (MapIterator2 x = indices1.begin(); x != indices1.end(); x++) {
+						in.seekg(x->second+1,ios_base::beg);
+						cout<<"Registro "<<setw(10)<<left<<cont;
+						cont++;
+						for(int i = 1; i<campos.size(); i++){
+							if(campos[i]->type == 1){
+								int dato;
+								in.read(reinterpret_cast<char*>(&dato), sizeof(int));
 									//cout<<campos[i]->name<<": "<<dato<<endl;
-							cout<<setw(sizeint)<<right<<dato;
-						}else{
-							if(campos[i]->size == 1){
-								char dato;
-								in.read(&dato,sizeof(char));
-										//cout<<campos[i]->name<<": "<<dato<<endl;
-								cout<<setw(campos[i]->size+15)<<right<<dato;
+								cout<<setw(sizeint)<<right<<dato;
 							}else{
-								char* dato = new char[campos[i]->size];
-								in.read(dato, campos[i]->size*sizeof(char));
-								cout<<setw(campos[i]->size+15)<<right<<dato;
+								if(campos[i]->size == 1){
+									char dato;
+									in.read(&dato,sizeof(char));
 										//cout<<campos[i]->name<<": "<<dato<<endl;
+									cout<<setw(campos[i]->size+15)<<right<<dato;
+								}else{
+									char* dato = new char[campos[i]->size];
+									in.read(dato, campos[i]->size*sizeof(char));
+									cout<<setw(campos[i]->size+15)<<right<<dato;
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+								}
 							}
 						}
+						cout<<endl;
+						if(cont%10 == 0 && cont!=0){
+							char respuesta2;
+							cout<<"Ingrese 1 para ver 10 registros mas: ";
+							cin>>respuesta2;
+							if(respuesta2 != '1')
+								break;
+						}
 					}
-					cout<<endl;
-					if(cont%10 == 0 && cont!=0){
-						char respuesta2;
-						cout<<"Ingrese 1 para ver 10 registros mas: ";
-						cin>>respuesta2;
-						if(respuesta2 != '1')
-							break;
+				}else{
+					for (MapIterator x = indices.begin(); x != indices.end(); x++) {
+						in.seekg(x->second+1,ios_base::beg);
+						cout<<"Registro "<<setw(10)<<left<<cont;
+						cont++;
+						for(int i = 1; i<campos.size(); i++){
+							if(campos[i]->type == 1){
+								int dato;
+								in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+									//cout<<campos[i]->name<<": "<<dato<<endl;
+								cout<<setw(sizeint)<<right<<dato;
+							}else{
+								if(campos[i]->size == 1){
+									char dato;
+									in.read(&dato,sizeof(char));
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+									cout<<setw(campos[i]->size+15)<<right<<dato;
+								}else{
+									char* dato = new char[campos[i]->size];
+									in.read(dato, campos[i]->size*sizeof(char));
+									cout<<setw(campos[i]->size+15)<<right<<dato;
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+								}
+							}
+						}
+						cout<<endl;
+						if(cont%10 == 0 && cont!=0){
+							char respuesta2;
+							cout<<"Ingrese 1 para ver 10 registros mas: ";
+							cin>>respuesta2;
+							if(respuesta2 != '1')
+								break;
+						}
 					}
 				}
 
@@ -1002,31 +1056,37 @@ int main(int argc, char* argv[]){
 			string ingresado2;
 			cout<<"Ingrese el nombre del archivo con que lo quiere cruzar: ";
 			getline(cin,ingresado2);
+			getline(cin,ingresado2);
 			stringstream ss2;
 			ss2<<ingresado2<<".bin";
-			char* nombre_archivo2 = new char[15];
+			char* nombre_archivo2 = new char[ingresado2.size()+5];
 			strcpy(nombre_archivo2,ss2.str().c_str());
-			ifstream in1(nombre_archivo,ios::in|ios::bin);
+			fstream in1(nombre_archivo,ios::in|ios::binary);
 			in1.seekg(sizeof(int)*2+sizeof(long int)+cant_campos*(15+2*sizeof(int)),ios::beg);
-			ifstream in2(nombre_archivo2,ios::in|ios::bin);
+			fstream in2(nombre_archivo2,ios::in|ios::binary);
 			if(!in2.is_open()){
-				cout<<"El archivo 2 no existe"<<endl:
+				cout<<"El archivo 2 no existe"<<endl;
 			}else{
 				vector<Data*> campos2;
 				vector<Data*> campos3;
-				campos3.push_back(campos2[0]);
+				campos3.push_back(campos[0]);
 				int cant_campos2;
 				int avail_list2;
 				long int cant_registros2;
 				in2.read(reinterpret_cast<char*>(&cant_campos2),sizeof(int));
 				in2.read(reinterpret_cast<char*>(&avail_list2),sizeof(int));
 				in2.read(reinterpret_cast<char*>(&cant_registros2),sizeof(long int));
-				campos = ReadHeader(&in2,cant_campos2);
-				char* nombre_archivo3 = new char[15];
+				campos2 = ReadHeader(&in2,cant_campos2);
+				int inicio_registros = sizeof(int)*2+sizeof(long int)+cant_campos*(15+2*sizeof(int));
+
+				string resultado;
 				cout<<"Ingrese el nombre del archivo donde quiere guardar el cruce: ";
-				cin>>nombre_archivo3;
-				nombre_archivo3[14] = '\0';
-				fstream out(nombre_archivo3, ios::out|ios::bin);
+				getline(cin,resultado);
+				char* nombre_archivo3 = new char[resultado.size()+5];
+				stringstream resultado2;
+				resultado2<<resultado<<".bin";
+				strcpy(nombre_archivo3,resultado2.str().c_str());
+				fstream out(nombre_archivo3, ios::out|ios::binary);
 				cout<<"Campos archivo 1"<<endl;
 				for(int i = 1; i<campos.size(); i++){
 					cout<<i<<" :"<<campos[i]->name<<endl;
@@ -1034,23 +1094,31 @@ int main(int argc, char* argv[]){
 				int pos_campo1;
 				cout<<"Ingrese el numero que campo que quiere cruzar: ";
 				cin>>pos_campo1;
-
-				campos3.push_back(campos[pos_campo1]);
+				int offset_campo1 = 0;
+				for(int k = 0; k<pos_campo1; k++){
+					if(campos[k]->type == 1)
+						offset_campo1 += sizeof(int);
+					else
+						offset_campo1 += campos[k]->size;
+				}
+				//campos3.push_back(campos[pos_campo1]);
 				int campo_cruzar1;
 				vector<int> campos_cruzar1;
 
 				do{
 					cout<<"Ingrese el numero de campo que quiere incluir en el cruce(-1 para dejar de ingresar): ";
 					cin>>campo_cruzar1;
-					campos3.push_back(campos[campo_cruzar1]);
-					int offset_temp = 0;
-					for(int k = 0; k<campo_cruzar1; k++){
-						if(campos[k]->type == 1)
-							offset_temp += sizeof(int);
-						else
-							offset_temp += campos[k]->size;
+					if(campo_cruzar1 != -1){
+						campos3.push_back(campos[campo_cruzar1]);
+						int offset_temp = 0;
+						for(int k = 0; k<campo_cruzar1; k++){
+							if(campos[k]->type == 1)
+								offset_temp += sizeof(int);
+							else
+								offset_temp += campos[k]->size;
+						}
+						campos_cruzar1.push_back(offset_temp);
 					}
-					campo_cruzar1.push_back(offset_temp);
 					//campos_cruzar1.push_back(campo_cruzar1);
 				}while(campo_cruzar1 != -1);
 
@@ -1069,26 +1137,36 @@ int main(int argc, char* argv[]){
 					}else
 						validado = true;
 				}while(!validado);
+				int offset_campo2 = 0;
+				for(int k = 0; k<pos_campo2; k++){
+					if(campos2[k]->type == 1)
+						offset_campo2 += sizeof(int);
+					else
+						offset_campo2 += campos2[k]->size;
+				}
 				int campo_cruzar2;
 				vector<int> campos_cruzar2;
 				do{
 					cout<<"Ingrese el numero de campo que quiere incluir en el cruce(-1 para dejar de ingresar): ";
 					cin>>campo_cruzar2;
-					campos3.push_back(campos[campo_cruzar2]);
-					int offset_temp = 0;
-					for(int k = 0; k<campo_cruzar2; k++){
-						if(campos2[k]->type == 1)
-							offset_temp += sizeof(int);
-						else
-							offset_temp += campos2[k]->size;
+					if(campo_cruzar2 != -1){
+						campos3.push_back(campos2[campo_cruzar2]);
+						int offset_temp = 0;
+						for(int k = 0; k<campo_cruzar2; k++){
+							if(campos2[k]->type == 1)
+								offset_temp += sizeof(int);
+							else
+								offset_temp += campos2[k]->size;
+						}
+						campos_cruzar2.push_back(offset_temp);
 					}
-					campo_cruzar2.push_back(offset_temp);
 					//campos_cruzar2.push_back(campo_cruzar2);
 				}while(campo_cruzar2 != -1);
 
 				int temp_availist = 0;
 				long int cant_registros3 = 0;
-				out.write(reinterpret_cast<char*>(&(campos3.size())),sizeof(int));
+				int campos3_temp = campos3.size();
+				out.write(reinterpret_cast<char*>(&campos3_temp),sizeof(int));
 				out.write(reinterpret_cast<char*>(&temp_availist),sizeof(int));
 				out.write(reinterpret_cast<char*>(&cant_registros3),sizeof(long int));
 				for(int i = 0; i<campos3.size(); i++){
@@ -1109,58 +1187,73 @@ int main(int argc, char* argv[]){
 				for(int i = 0; i<campos2.size(); i++){
 					if(campos2[i]->type == 1)
 						tam_registro2 += sizeof(int);
-					else
+					else{
 						tam_registro2+= campos2[i]->size;
+						//cout<<"campos "<<i<<campos2[i]->size<<endl;
+					}
 				}
 				if(index == '1'){
+					//cout<<"Cruzar sin indices"<<endl;
+					/*for(int i = 0; i<campos3.size(); i++){
+						cout<<campos3[i]->name<<endl;
+					}*/
 					for(int i =0; i<cant_registros; i++){
 						string llave_compartida;
-						in1.seekg(sizeof(char),ios::cur);
-						if(campos3[1]->type == 1){
+						in1.seekg(offset_campo1,ios::cur);
+						if(campos[pos_campo1]->type == 1){
 							int dato;
 							in1.read(reinterpret_cast<char*>(&dato),sizeof(int));
-							in1.seekg(-sizeof(int)-1,ios::cur);
+							in1.seekg(-sizeof(int),ios::cur);
 							stringstream ss3;
 							ss3<<dato;
 							llave_compartida = ss3.str();
-						}else if(campos3[1]->size == 1){
+						}else if(campos[pos_campo1]->size == 1){
 							char dato;
 							in1.read(reinterpret_cast<char*>(&dato),sizeof(char));
-							in1.seekg(-sizeof(char)-1,ios::cur);
+							in1.seekg(-sizeof(char),ios::cur);
 							stringstream ss3;
 							ss3<<dato;
 							llave_compartida = ss3.str();
 						}else{
-							char* dato = new char[campos3[1]->size];
-							in1.read(dato,sizeof(char)*campos3->size);
-							in1.seekg(-sizeof(char)*campos3->size-1,ios::cur);
+							char* dato = new char[campos[pos_campo1]->size];
+							in1.read(dato,sizeof(char)*campos[pos_campo1]->size);
+							in1.seekg(-sizeof(char)*campos[pos_campo1]->size,ios::cur);
 							llave_compartida = string(dato);
 						}
-
+						in2.seekg(inicio_registros,ios::beg);
+						in1.seekg(-offset_campo1,ios::cur);
 						for(int j = 0; j<cant_registros2; j++){
 							string llave_compartida2;
-							in2.seekg(sizeof(char),ios::cur);
-							if(campos3[1]->type == 1){
+							//cout<<"offset "<<offset_campo2<<endl;
+							//cout<<"actual "<<in2.tellg()<<endl;
+
+							in2.seekg(offset_campo2,ios::cur);
+							if(campos2[pos_campo2]->type == 1){
 								int dato;
 								in2.read(reinterpret_cast<char*>(&dato),sizeof(int));
-								in2.seekg(-sizeof(int)-1,ios::cur);
+								in2.seekg(-sizeof(int),ios::cur);
 								stringstream ss3;
 								ss3<<dato;
 								llave_compartida2 = ss3.str();
-							}else if(campos3[1]->size == 1){
+							}else if(campos2[pos_campo2]->size == 1){
 								char dato;
 								in2.read(reinterpret_cast<char*>(&dato),sizeof(char));
-								in2.seekg(-sizeof(char)-1,ios::cur);
+								in2.seekg(-sizeof(char),ios::cur);
 								stringstream ss3;
 								ss3<<dato;
 								llave_compartida2 = ss3.str();
 							}else{
-								char* dato = new char[campos3[1]->size];
-								in2.read(dato,sizeof(char)*campos3->size);
-								in2.seekg(-sizeof(char)*campos3->size-1,ios::cur);
+								char* dato = new char[campos2[pos_campo2]->size];
+								in2.read(dato,sizeof(char)*campos2[pos_campo2]->size);
+								in2.seekg(-sizeof(char)*campos2[pos_campo2]->size,ios::cur);
 								llave_compartida2 = string(dato);
 							}
+							//cout<<llave_compartida<<" "<<llave_compartida2<<endl;
+							in2.seekg(-offset_campo2,ios::cur);
 							if(llave_compartida == llave_compartida2){
+								//cout<<"llave igual"<<endl;
+								//in1.seekg(,ios::cur);
+								cant_registros3++;
 								char borrado = '1';
 								out.write(reinterpret_cast<char*>(&borrado),sizeof(char));
 								//in.seekg(sizeof(char),ios::cur);
@@ -1170,60 +1263,161 @@ int main(int argc, char* argv[]){
 									if(campos3[acumulador]->type == 1){
 										int dato;
 										in1.read(reinterpret_cast<char*>(&dato),sizeof(int));
+										//cout<<dato<<endl;
 										out.write(reinterpret_cast<char*>(&dato),sizeof(int));
 										in1.seekg(-sizeof(int),ios::cur);
 									}else if(campos3[acumulador]->size == 1){
 										char dato;
 										in1.read(reinterpret_cast<char*>(&dato),sizeof(char));
+										//cout<<dato<<endl;
 										out.write(reinterpret_cast<char*>(&dato),sizeof(char));
 										in1.seekg(-sizeof(char),ios::cur);
 									}else{
 										char* dato = new char[campos3[acumulador]->size];
 										in1.read(dato,sizeof(char)*campos3[acumulador]->size);
-										out.write(dato,sizeof(char)*campos3->size);
+										//cout<<dato<<endl;
+										for(int x = 0; x<campos3[acumulador]->size; x++)
+											out.write(reinterpret_cast<char*>(&(dato[x])),sizeof(char));
 										in1.seekg(-campos3[acumulador]->size,ios::cur);
 									}
 									acumulador++;
 									in1.seekg(-campos_cruzar1[k],ios::cur);
 								}
+								
 								for(int k = 0; k<campos_cruzar2.size(); k++){
 									in2.seekg(campos_cruzar2[k],ios::cur);
 									if(campos3[acumulador]->type == 1){
 										int dato;
 										in2.read(reinterpret_cast<char*>(&dato),sizeof(int));
+										//cout<<dato<<endl;
 										out.write(reinterpret_cast<char*>(&dato),sizeof(int));
 										in2.seekg(-sizeof(int),ios::cur);
 									}else if(campos3[acumulador]->size == 1){
 										char dato;
 										in2.read(reinterpret_cast<char*>(&dato),sizeof(char));
+										//cout<<dato<<endl;
 										out.write(reinterpret_cast<char*>(&dato),sizeof(char));
 										in2.seekg(-sizeof(char),ios::cur);
 									}else{
 										char* dato = new char[campos3[acumulador]->size];
 										in2.read(dato,sizeof(char)*campos3[acumulador]->size);
-										out.write(dato,sizeof(char)*campos3->size);
+										//cout<<dato<<endl;
+										for(int x = 0; x<campos3[acumulador]->size; x++)
+											out.write(reinterpret_cast<char*>(&(dato[x])),sizeof(char));
 										in2.seekg(-campos3[acumulador]->size,ios::cur);
 									}
 									acumulador++;
 									in2.seekg(-campos_cruzar2[k],ios::cur);
 								}
+							}else{
+
 							}
+							in2.seekg(tam_registro2,ios::cur);
 						}
-						out.close();
+						in1.seekg(tam_registro1,ios::cur);
+						
 					} 
-					in1.close();
-					in2.close();
+					
+					
 				}else if(index == '2'){
+					map<string,int> indices2;
+					char* nombre_archivo4 = new char[ingresado2.size()+4];
+					stringstream ss4;
+					ss4<<ingresado2<<".in";
+					strcpy(nombre_archivo4,ss4.str().c_str());
+					fstream in_temp(nombre_archivo2, ios::in|ios::binary);
+					Reindexar(&in_temp,nombre_archivo4);
+					in_temp.close();
+					ReadIndex(&indices2,nombre_archivo4,cant_registros2, campos2[1]->type, campos2[1]->size);
+					typedef map<string, int>::const_iterator MapIterator;
+					MapIterator x1 = indices.begin();
+					MapIterator x2 = indices2.begin();
+					while(x1 != indices.end() && x2 != indices2.end()){
+						if(x1->first == x2->first){
+							in1.seekg(x1->second,ios::beg);
+							in2.seekg(x2->second,ios::beg);
+							cant_registros3++;
+							char borrado = '1';
+							out.write(reinterpret_cast<char*>(&borrado),sizeof(char));
+								//in.seekg(sizeof(char),ios::cur);
+							int acumulador = 1;
+							for(int k = 0; k<campos_cruzar1.size(); k++){
+								in1.seekg(campos_cruzar1[k],ios::cur);
+								if(campos3[acumulador]->type == 1){
+									int dato;
+									in1.read(reinterpret_cast<char*>(&dato),sizeof(int));
+										//cout<<dato<<endl;
+									out.write(reinterpret_cast<char*>(&dato),sizeof(int));
+									in1.seekg(-sizeof(int),ios::cur);
+								}else if(campos3[acumulador]->size == 1){
+									char dato;
+									in1.read(reinterpret_cast<char*>(&dato),sizeof(char));
+										//cout<<dato<<endl;
+									out.write(reinterpret_cast<char*>(&dato),sizeof(char));
+									in1.seekg(-sizeof(char),ios::cur);
+								}else{
+									char* dato = new char[campos3[acumulador]->size];
+									in1.read(dato,sizeof(char)*campos3[acumulador]->size);
+										//cout<<dato<<endl;
+									for(int x = 0; x<campos3[acumulador]->size; x++)
+										out.write(reinterpret_cast<char*>(&(dato[x])),sizeof(char));
+									in1.seekg(-campos3[acumulador]->size,ios::cur);
+								}
+								acumulador++;
+								in1.seekg(-campos_cruzar1[k],ios::cur);
+							}
+
+							for(int k = 0; k<campos_cruzar2.size(); k++){
+								in2.seekg(campos_cruzar2[k],ios::cur);
+								if(campos3[acumulador]->type == 1){
+									int dato;
+									in2.read(reinterpret_cast<char*>(&dato),sizeof(int));
+										//cout<<dato<<endl;
+									out.write(reinterpret_cast<char*>(&dato),sizeof(int));
+									in2.seekg(-sizeof(int),ios::cur);
+								}else if(campos3[acumulador]->size == 1){
+									char dato;
+									in2.read(reinterpret_cast<char*>(&dato),sizeof(char));
+										//cout<<dato<<endl;
+									out.write(reinterpret_cast<char*>(&dato),sizeof(char));
+									in2.seekg(-sizeof(char),ios::cur);
+								}else{
+									char* dato = new char[campos3[acumulador]->size];
+									in2.read(dato,sizeof(char)*campos3[acumulador]->size);
+										//cout<<dato<<endl;
+									for(int x = 0; x<campos3[acumulador]->size; x++)
+										out.write(reinterpret_cast<char*>(&(dato[x])),sizeof(char));
+									in2.seekg(-campos3[acumulador]->size,ios::cur);
+								}
+								acumulador++;
+								in2.seekg(-campos_cruzar2[k],ios::cur);
+							}
+							x1++;
+							x2++;
+						}else if(x1->first<x2->first){
+							x1++;
+						}else{
+							x2++;
+						}						
+					}
 
 				}else{
 
 				}
+				in1.close();
+				in2.close();
+				out.close();
+				fstream out2(nombre_archivo3, ios::out|ios::binary|ios::in);
+				out2.seekp(sizeof(int)*2,ios::beg);
+				out2.write(reinterpret_cast<char*>(&cant_registros3),sizeof(long int));
+				out2.close();
 			}
 		}else if(opcion == '9'){
 
 		}else{
 			cout<<"La opcion no es valida"<<endl;
 		}
+		iniciado = true;
 	}while(opcion != '9');
 
 	return 0;
@@ -1456,3 +1650,98 @@ bool Repetido(char* nombre_archivo,string llave,long int cant_registros,vector<D
 	//cout<<"no repetido"<<endl;
 	return false;
 }
+
+/*bool busqueda_arbol(string buscado,char* nombre_archivo, int* pos_buscado){
+	fstream in(nombre_archivo,ios::bin|ios::in);
+	int size_key;
+	int type_key;
+	int order = tree_order;
+	in.read(reinterpret_cast<char*>(&size_key), sizeof(int));
+	in.read(reinterpret_cast<char*>(&type_key), sizeof(int));
+	int posnodo_insertar = in.tellp();
+	Nodo* actual = readNode(&in,type_key,size_key,order);
+	int nodo_siguiente = -1;
+
+	do{	
+		int cont = 0;
+		for (list<Key_Offset>::iterator it=(actual->llaves).begin(); it != (actual->llaves).end(); ++it){
+			if(it->key == buscado){
+				pos_buscado = it->offset;
+				in.close()
+				return true;
+			}else if(buscado < it->key){
+				nodo_siguiente = actual->offset[cont];
+				if(nodo_siguiente != -1)
+					in.seekp(nodo_siguiente,ios::beg);
+				break;
+			}
+			cont++;
+		}
+    	if(nodo_siguiente == -1)
+    		nodo_siguiente = actual->offset[cont];
+    	if(nodo_siguiente != -1){
+			in.seekp(nodo_siguiente,ios::beg);
+			posnodo_insertar = in.tellp();
+			actual = readNode(&in,type_key,size_key,order);
+    	}
+	}while(nodo_siguiente != -1);
+	pos_buscado = posnodo_insertar;
+	in.close();
+	return false;
+}
+
+Node* readNode(fstream* in, int type_key, int size_key,int order){
+	Node* nodo = new Node;
+	Key_Offset* key_offset = new Key_Offset;
+	int cant_keys;
+	in.read(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+	int offset;
+	in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+	nodo->hijos.push_back(offset);
+	for(int i =0; i<cant_keys; i++){
+		key_offset = new Key_Offset;
+		if(type_key == 1){
+			int dato;
+			in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+			stringstream ss;
+			ss<<dato;
+			key_offset->key = ss.str();
+			int dato2;
+			in.read(reinterpret_cast<char*>(&dato2), sizeof(int));
+			key_offset->offset = dato2;
+			nodo->llaves.push_back(key_offset);
+		}else if(size_key == 1){
+			char dato;
+			in.read(reinterpret_cast<char*>(&dato), sizeof(char));
+			stringstream ss;
+			ss<<dato;
+			key_offset->key = ss.str();
+			int dato2;
+			in.read(reinterpret_cast<char*>(&dato2), sizeof(int));
+			key_offset->offset = dato2;
+			nodo->llaves.push_back(key_offset);
+		}else{
+			char* dato = new char[size_key];
+			in.read(dato, sizeof(char)*size_key);
+			key_offset->key = string(dato);
+			int dato2;
+			in.read(reinterpret_cast<char*>(&dato2), sizeof(int));
+			key_offset->offset = dato2;
+			nodo->llaves.push_back(key_offset);
+		}
+		in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+		nodo->hijos.push_back(offset);
+	}
+	for(int i = cant_keys; i<order-1; i++){
+		if(type_key == 1)
+			in.seekp(sizeof(int),ios::cur);
+		else
+			in.seekp(size_key,ios::cur);
+		in.seekp(sizeof(int),ios::cur);
+	}
+	return nodo;
+}
+
+void InsertarArbol(Key_Offset){
+
+}*/
