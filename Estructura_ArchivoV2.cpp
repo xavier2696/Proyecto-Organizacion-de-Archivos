@@ -26,6 +26,7 @@ struct Key_Offset{
 
 struct Node{
 	int cant_key;
+	int pos_padre;
 	list<Key_Offset> llaves;
 	list<int> hijos;
 };
@@ -34,6 +35,11 @@ vector<Data*> ReadHeader(fstream* , int);
 bool ReadIndex(map<string,int>* ,char* ,long int , int , int);
 void Reindexar(fstream*, char*);
 bool Repetido(char* ,string,long int ,vector<Data*> );
+bool Busqueda_Arbol(string ,char* , int* , int , int );
+Node* ReadNode(fstream*, int , int ,int );
+bool Insertar(char* , int , int ,int , Key_Offset , int );
+void EscribirNodo(fstream* , int , int , Node*);
+void CreateTree(char*,string ,int , int , int , vector<Data*> );
 
 int main(int argc, char* argv[]){
 	char opcion = '1';
@@ -151,6 +157,9 @@ int main(int argc, char* argv[]){
 				in.close();
 				ReadIndex(&indices,nombre_archivo2,cant_registros, campos[1]->type, campos[1]->size);
 			}
+			if(index == '3'){
+				CreateTree(nombre_archivo, ingresado,cant_campos, cant_registros, avail_list, campos);
+			}
 		}else if(opcion == '2'){
 			stringstream ss2;
 			ss2<<ingresado<<".in";
@@ -234,6 +243,17 @@ int main(int argc, char* argv[]){
 					cant_registros++;
 					if(index == '2'){
 						indices.insert(pair<string,int>(dato2,offset));
+					}else if( index == '3'){
+						Key_Offset llave;
+						llave.key = dato2;
+						llave.offset = offset;
+						stringstream ss3;
+						ss3<<ingresado<<".btree";
+						char* nombre_archivo3 = new char[ss3.str().size()];
+						strcpy(nombre_archivo3,ss3.str().c_str());
+						int pos_insertar;
+						Busqueda_Arbol(llave.key,nombre_archivo3, &pos_insertar, campos[1]->type, campos[1]->size);
+						Insertar(nombre_archivo3, campos[1]->type, campos[1]->size,pos_insertar, llave, -1);
 					}
 					out.flush();
 					cout<<"Ingrese 1 para ingresar otro registro: ";
@@ -340,6 +360,17 @@ int main(int argc, char* argv[]){
 
 					if(index == '2'){
 						indices.insert(pair<string,int>(dato2,offset));						
+					}else if( index == '3'){
+						Key_Offset llave;
+						llave.key = dato2;
+						llave.offset = offset;
+						stringstream ss3;
+						ss3<<ingresado<<".btree";
+						char* nombre_archivo3 = new char[ss3.str().size()];
+						strcpy(nombre_archivo3,ss3.str().c_str());
+						int pos_insertar;
+						Busqueda_Arbol(llave.key,nombre_archivo3, &pos_insertar, campos[1]->type, campos[1]->size);
+						Insertar(nombre_archivo3, campos[1]->type, campos[1]->size,pos_insertar, llave, -1);
 					}
 
 					out.close();
@@ -539,6 +570,8 @@ int main(int argc, char* argv[]){
 				}
 
 				
+			}else if(index == 3){
+
 			}
 			in.close();	
 			
@@ -1651,97 +1684,458 @@ bool Repetido(char* nombre_archivo,string llave,long int cant_registros,vector<D
 	return false;
 }
 
-/*bool busqueda_arbol(string buscado,char* nombre_archivo, int* pos_buscado){
-	fstream in(nombre_archivo,ios::bin|ios::in);
-	int size_key;
-	int type_key;
-	int order = tree_order;
-	in.read(reinterpret_cast<char*>(&size_key), sizeof(int));
-	in.read(reinterpret_cast<char*>(&type_key), sizeof(int));
-	int posnodo_insertar = in.tellp();
-	Nodo* actual = readNode(&in,type_key,size_key,order);
-	int nodo_siguiente = -1;
 
+bool Busqueda_Arbol(string buscado,char* nombre_archivo2,int* pos_buscado, int type_key, int size_key){
+	fstream in(nombre_archivo2,ios::in|ios::binary);
+	int pos_root;
+	int order = tree_order;
+
+	//int cant_keys;
+	//in.read(reinterpret_cast<char*>(&root), sizeof(int));
+	//in.read(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+	in.read(reinterpret_cast<char*>(&pos_root), sizeof(int));
+	//cout<<pos_root<<endl;
+	int posnodo_insertar = pos_root;
+	in.seekp(pos_root,ios::beg);
+	Node* actual = ReadNode(&in,type_key,size_key,order);
+	int nodo_siguiente = -1;
 	do{	
 		int cont = 0;
 		for (list<Key_Offset>::iterator it=(actual->llaves).begin(); it != (actual->llaves).end(); ++it){
 			if(it->key == buscado){
-				pos_buscado = it->offset;
-				in.close()
+				*pos_buscado = it->offset;
+				in.close();
 				return true;
 			}else if(buscado < it->key){
-				nodo_siguiente = actual->offset[cont];
-				if(nodo_siguiente != -1)
-					in.seekp(nodo_siguiente,ios::beg);
+				list<int>::iterator it2 = (actual->hijos).begin();
+				for(int i = 0; i<cont; i++ ){
+					++it2;
+				}
+				nodo_siguiente = *it2;
+				//if(nodo_siguiente != -1)
+				//	in.seekp(nodo_siguiente,ios::beg);
 				break;
 			}
 			cont++;
 		}
-    	if(nodo_siguiente == -1)
-    		nodo_siguiente = actual->offset[cont];
+    	if(nodo_siguiente == -1){
+    		//list<int>::iterator it2 = (actual->hijos).end();
+    		//--it2;
+			nodo_siguiente = actual->hijos.back();
+    	}
     	if(nodo_siguiente != -1){
 			in.seekp(nodo_siguiente,ios::beg);
 			posnodo_insertar = in.tellp();
-			actual = readNode(&in,type_key,size_key,order);
+			actual = ReadNode(&in,type_key,size_key,order);
     	}
 	}while(nodo_siguiente != -1);
-	pos_buscado = posnodo_insertar;
+
+	*pos_buscado = posnodo_insertar;
+	//cout<<"pos buscado"<<*pos_buscado<<endl;
 	in.close();
 	return false;
 }
 
-Node* readNode(fstream* in, int type_key, int size_key,int order){
+Node* ReadNode(fstream* in, int type_key, int size_key,int order){
 	Node* nodo = new Node;
 	Key_Offset* key_offset = new Key_Offset;
 	int cant_keys;
-	in.read(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+	in->read(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+	nodo->cant_key = cant_keys;
+	int offset_padre;
+	in->read(reinterpret_cast<char*>(&offset_padre), sizeof(int));
+	nodo->pos_padre = offset_padre;
 	int offset;
-	in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+	in->read(reinterpret_cast<char*>(&offset), sizeof(int));
 	nodo->hijos.push_back(offset);
 	for(int i =0; i<cant_keys; i++){
 		key_offset = new Key_Offset;
 		if(type_key == 1){
 			int dato;
-			in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+			in->read(reinterpret_cast<char*>(&dato), sizeof(int));
 			stringstream ss;
 			ss<<dato;
 			key_offset->key = ss.str();
 			int dato2;
-			in.read(reinterpret_cast<char*>(&dato2), sizeof(int));
+			in->read(reinterpret_cast<char*>(&dato2), sizeof(int));
 			key_offset->offset = dato2;
-			nodo->llaves.push_back(key_offset);
+			nodo->llaves.push_back(*key_offset);
 		}else if(size_key == 1){
 			char dato;
-			in.read(reinterpret_cast<char*>(&dato), sizeof(char));
+			in->read(reinterpret_cast<char*>(&dato), sizeof(char));
 			stringstream ss;
 			ss<<dato;
 			key_offset->key = ss.str();
 			int dato2;
-			in.read(reinterpret_cast<char*>(&dato2), sizeof(int));
+			in->read(reinterpret_cast<char*>(&dato2), sizeof(int));
 			key_offset->offset = dato2;
-			nodo->llaves.push_back(key_offset);
+			nodo->llaves.push_back(*key_offset);
 		}else{
 			char* dato = new char[size_key];
-			in.read(dato, sizeof(char)*size_key);
+			in->read(dato, sizeof(char)*size_key);
 			key_offset->key = string(dato);
 			int dato2;
-			in.read(reinterpret_cast<char*>(&dato2), sizeof(int));
+			in->read(reinterpret_cast<char*>(&dato2), sizeof(int));
 			key_offset->offset = dato2;
-			nodo->llaves.push_back(key_offset);
+			nodo->llaves.push_back(*key_offset);
 		}
-		in.read(reinterpret_cast<char*>(&offset), sizeof(int));
+		in->read(reinterpret_cast<char*>(&offset), sizeof(int));
 		nodo->hijos.push_back(offset);
 	}
-	for(int i = cant_keys; i<order-1; i++){
+	/*for(int i = cant_keys; i<order-1; i++){
 		if(type_key == 1)
 			in.seekp(sizeof(int),ios::cur);
 		else
 			in.seekp(size_key,ios::cur);
 		in.seekp(sizeof(int),ios::cur);
-	}
+	}*/
 	return nodo;
 }
 
-void InsertarArbol(Key_Offset){
+bool Insertar(char* nombre_archivo, int key_type, int size_key,int pos_insertar, Key_Offset llave, int rrn_split){
+	fstream in(nombre_archivo,ios::binary|ios::in);
+	in.seekp(pos_insertar,ios::beg);
+	Node* nodo = ReadNode(&in,key_type,size_key,tree_order);
+	in.close();
+	list<Key_Offset>::iterator it;
+	list<int>::iterator it2 = nodo->hijos.begin();
+	++it2;
+	for (it=(nodo->llaves).begin(); it != (nodo->llaves).end(); ++it){
+		if(it->key > llave.key){
+			break;
+		}
+		++it2;		
+	}	
+	(nodo->llaves).insert(it,llave);
+	nodo->hijos.insert(it2, rrn_split);
+	nodo->cant_key = nodo->cant_key++;
+	if(nodo->llaves.size() == tree_order){
+		list<Key_Offset>::iterator it3 = nodo->llaves.begin();
+		//list<int>::iterator it4 = nodo->hijos.begin();
+		//++it4;
+		for(int i = 0; i<nodo->llaves.size()/2; i++){
+			++it3;
+			//++it4;
+		}
+		fstream in(nombre_archivo,ios::binary|ios::in);
+		in.seekp(0,ios::end);
+		int temp = in.tellp();
+		in.close();
+		//split
+		Node* split1 = new Node;
+		Node* split2 = new Node;
+		split1->cant_key = nodo->llaves.size()/2-1;
+		split1->pos_padre = nodo->pos_padre;
+		split2->cant_key = nodo->llaves.size()/2;
+		split2->pos_padre = nodo->pos_padre;
+		list<Key_Offset>::iterator it4 = nodo->llaves.begin();
+		list<int>::iterator it5 = nodo->hijos.begin();
+		split1->hijos.push_back(*it5);
+		++it5;
+		for(int i = 0; i<nodo->llaves.size(); i++){
+			if(i == nodo->llaves.size()/2-1){
+				split2->hijos.push_back(*it5);
+			}else if(i < nodo->llaves.size()/2-1){
+				split1->llaves.push_back(*it4);
+				split1->hijos.push_back(*it5);
+			}else{
+				split2->llaves.push_back(*it4);
+				split2->hijos.push_back(*it5);
+			}
+			++it4;
+			++it5;
+		}
+		//split2->hijos.push_back(*it4);
+		
+		if(nodo->pos_padre != -1){
+			//sobrescribir en posicion nodo con mitad
+			fstream out(nombre_archivo,ios::out|ios::binary|ios::in);
+			out.seekg(pos_insertar,ios::beg);
+			EscribirNodo(&out,key_type,size_key,split1);
+			//escribir otra mitad al final
+			out.seekg(temp,ios::beg);
+			EscribirNodo(&out,key_type,size_key,split2);
+			out.close();
+			Insertar(nombre_archivo,key_type,size_key,nodo->pos_padre,*it3,temp);
+		}else{
+			int size_pagina = sizeof(int)*2 + tree_order*sizeof(int);
+			if(key_type == 1){
+				size_pagina += (tree_order-1)*(sizeof(int)+sizeof(int));
+			}else{
+				size_pagina += (tree_order-1)*(sizeof(int)+size_key);
+			}
+			split1->pos_padre = temp + size_pagina;
+			split2->pos_padre = temp + size_pagina;		
 
-}*/
+			//sobrescribir en posicion nodo con mitad
+			fstream out(nombre_archivo,ios::out|ios::binary|ios::in);
+			out.seekg(pos_insertar,ios::beg);
+			EscribirNodo(&out,key_type,size_key,split1);
+			//escribir otra mitad al final
+			out.seekg(temp,ios::beg);
+			EscribirNodo(&out,key_type,size_key,split2);
+			
+			Node* neoroot = new Node;
+			neoroot->cant_key = 1;
+			neoroot->pos_padre = -1;
+			
+			neoroot->llaves.push_back(*it3);
+			neoroot->hijos.push_back(pos_insertar);
+			neoroot->hijos.push_back(temp);
+			EscribirNodo(&out,key_type,size_key,neoroot);
+			out.close();
+			fstream out2(nombre_archivo,ios::in|ios::out|ios::binary);
+			int newroot = temp+size_pagina;			
+			out2.write(reinterpret_cast<char*>(&newroot), sizeof(int));
+			out2.close();
+			//Insertar(nombre_archivo,key_type,size_key,pos_padre,*it3,temp);
+		}
+		return true;
+	}else{
+		//sobrescribir nuevo
+		fstream out(nombre_archivo,ios::out|ios::binary|ios::in);
+		out.seekg(pos_insertar,ios::beg);
+		EscribirNodo(&out,key_type,size_key,nodo);
+		out.close();
+		return false;
+	}
+}
+
+void EscribirNodo(fstream* out, int key_type, int key_size, Node* nodo){
+	int cant_keys = nodo->cant_key;
+	int pos_padre = nodo->pos_padre;
+	out->write(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+	out->write(reinterpret_cast<char*>(&pos_padre), sizeof(int));
+	list<int>::iterator it1 = nodo->hijos.begin();
+	out->write(reinterpret_cast<char*>(&(*it1)), sizeof(int));
+	for(list<Key_Offset>::iterator it2 = nodo->llaves.begin();it2 != nodo->llaves.end(); ++it2){
+		if(key_type == 1){
+			int dato;
+			dato = atoi(it2->key.c_str());
+			out->write(reinterpret_cast<char*>(&dato), sizeof(int));
+			int offset = it2->offset;
+			out->write(reinterpret_cast<char*>(&offset), sizeof(int));
+		}else if(key_size == 1){
+			char dato;
+			dato = it2->key[0];
+			out->write(reinterpret_cast<char*>(&dato), sizeof(char));
+			int offset = it2->offset;
+			out->write(reinterpret_cast<char*>(&offset), sizeof(int));
+		}else{
+			char* dato = new char[key_size];
+			strcpy(dato,it2->key.c_str());
+			out->write(dato, sizeof(char)*key_size);
+			int offset = it2->offset;
+			out->write(reinterpret_cast<char*>(&offset), sizeof(int));
+		}
+		++it1;
+		out->write(reinterpret_cast<char*>(&(*it1)), sizeof(int));
+		
+	}
+
+}
+
+void CreateTree(char* nombre_archivo, string ingresado,int cant_campos, int cant_registros, int avail_list, vector<Data*> campos){
+	stringstream ss;
+	ss<<ingresado<<".btree";
+	char* nombre_archivo2 = new char[ss.str().size()];
+	strcpy(nombre_archivo2,ss.str().c_str());
+	fstream in(nombre_archivo,ios::in|ios::binary);	
+	int size_header = sizeof(int)*2+sizeof(long int)+cant_campos*(sizeof(int)*2+15);
+	in.seekg(size_header,ios::beg);
+	for(int j = 0; j<cant_registros; j++){
+		char borrado;
+		in.read(reinterpret_cast<char*>(&borrado), sizeof(char));
+		//in->seekg(-sizeof(char),ios_base::cur);
+		if(borrado == '0'){
+			for(int i = 1; i<campos.size(); i++){
+				if(campos[i]->type == 1){
+					in.seekp(sizeof(int), ios_base::cur);
+				}else{
+					in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+				}
+			}
+			j--;
+		}else{
+			if(campos[1]->type == 1){
+				int dato;
+				int offset = (in.tellg());
+				offset--;
+				in.read(reinterpret_cast<char*>(&dato), sizeof(int));
+				stringstream ss;
+				ss<<dato;
+				string key = ss.str();
+				if(j == 0){
+					fstream out(nombre_archivo2,ios::out|ios::binary);
+					int root = 0;
+					int cant_keys = 1;
+					int pos_padre = -1;
+					int hijo = -1;
+					out.write(reinterpret_cast<char*>(&root), sizeof(int));
+					out.write(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+					out.write(reinterpret_cast<char*>(&pos_padre), sizeof(int));
+					out.write(reinterpret_cast<char*>(&hijo), sizeof(int));
+					out.write(reinterpret_cast<char*>(&dato), sizeof(int));
+					out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+					out.write(reinterpret_cast<char*>(&hijo), sizeof(int));
+					out.close();
+				}else{
+					Key_Offset llave;
+					llave.key = key;
+					llave.offset = offset;
+					int pos_insertar;
+					Busqueda_Arbol(llave.key,nombre_archivo2, &pos_insertar, campos[1]->type, campos[1]->size);
+					//cout<<pos_insertar<<endl;
+					Insertar(nombre_archivo2,campos[1]->type,campos[1]->size,pos_insertar,llave,-1);
+				}
+			}else{
+				if(campos[1]->size == 1){
+					char dato;
+					int offset = (in.tellg());
+					offset--;
+					in.read(&dato,sizeof(char));
+					stringstream ss;
+					ss<<dato;
+					string key = ss.str();
+
+					if(j == 0){
+						fstream out(nombre_archivo2,ios::out|ios::binary);
+						int root = 0;
+						int cant_keys = 1;
+						int pos_padre = -1;
+						int hijo = -1;
+						out.write(reinterpret_cast<char*>(&root), sizeof(int));
+						out.write(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+						out.write(reinterpret_cast<char*>(&pos_padre), sizeof(int));
+						out.write(reinterpret_cast<char*>(&hijo), sizeof(int));
+						out.write(reinterpret_cast<char*>(&dato), sizeof(char));
+						out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+						out.write(reinterpret_cast<char*>(&hijo), sizeof(int));
+						out.close();
+					}else{
+						Key_Offset llave;
+						llave.key = key;
+						llave.offset = offset;
+						int pos_insertar;
+						//cout<<pos_insertar<<endl;
+						Busqueda_Arbol(llave.key,nombre_archivo2, &pos_insertar, campos[1]->type, campos[1]->size);
+						Insertar(nombre_archivo2,campos[1]->type,campos[1]->size,pos_insertar,llave,-1);
+					}
+				}else{
+					char* dato = new char[campos[1]->size];
+					int offset = (in.tellg());
+					offset--;
+					in.read(dato, campos[1]->size*sizeof(char));
+					string key = string(dato);
+
+					if(j == 0){
+						fstream out(nombre_archivo2,ios::out|ios::binary);
+						int root = 0;
+						int cant_keys = 1;
+						int pos_padre = -1;
+						int hijo = -1;
+						out.write(reinterpret_cast<char*>(&root), sizeof(int));
+						out.write(reinterpret_cast<char*>(&cant_keys), sizeof(int));
+						out.write(reinterpret_cast<char*>(&pos_padre), sizeof(int));
+						out.write(reinterpret_cast<char*>(&hijo), sizeof(int));
+						out.write(dato, sizeof(char)*campos[1]->size);
+						out.write(reinterpret_cast<char*>(&offset), sizeof(int));
+						out.write(reinterpret_cast<char*>(&hijo), sizeof(int));
+						out.close();
+					}else{
+						Key_Offset llave;
+						llave.key = key;
+						llave.offset = offset;
+						int pos_insertar;
+						Busqueda_Arbol(llave.key,nombre_archivo2, &pos_insertar, campos[1]->type, campos[1]->size);
+						//cout<<pos_insertar<<endl;
+						Insertar(nombre_archivo2,campos[1]->type,campos[1]->size,pos_insertar,llave,-1);
+					}
+				}
+			}
+			for(int i = 2; i<campos.size(); i++){
+				if(campos[i]->type == 1){
+					in.seekp(sizeof(int), ios_base::cur);
+				}else{
+					in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+				}
+
+			}
+			//}
+		}
+	}
+	in.close();
+}
+
+void Listar(Node* nodo, int type_key, int size_key, char* nombre_archivo,char* nombre_archivo2, int sizeint,vector<Data*> campos){
+	list<int>::iterator it = nodo->hijos.begin();
+	if(*it != -1){
+		fstream in(nombre_archivo,ios::in|ios::binary);
+		in.seekg(*it,ios::beg);
+		Node* hijo = ReadNode(&in,type_key,size_key,tree_order);
+		in.close();
+		Listar(hijo,type_key,size_key,nombre_archivo,nombre_archivo2,sizeint,campos);	
+	}
+	++it;
+	int j = 0;
+	for(list<Key_Offset>::iterator it2 = nodo->llaves.begin(); it2 != nodo->llaves.end(); ++it2){
+		//listar con offset
+		fstream in2(nombre_archivo2,ios::in|ios::binary);
+		in2.seekg(it2->offset,ios::beg);
+		char borrado;
+		in2.read(reinterpret_cast<char*>(&borrado), sizeof(char));
+		if(borrado == '0'){
+			/*for(int i = 1; i<campos.size(); i++){
+				if(campos[i]->type == 1){
+					in.seekp(sizeof(int), ios_base::cur);
+				}else{
+					in.seekp(sizeof(char)*campos[i]->size, ios_base::cur);
+				}
+			}
+			j--;*/
+		}else{
+			cout<<"Registro "<<setw(10)<<left<<(j+1);
+			for(int i = 1; i<campos.size(); i++){
+				if(campos[i]->type == 1){
+					int dato;
+					in2.read(reinterpret_cast<char*>(&dato), sizeof(int));
+									//cout<<campos[i]->name<<": "<<dato<<endl;
+					cout<<setw(sizeint)<<right<<dato;
+				}else{
+					if(campos[i]->size == 1){
+						char dato;
+						in2.read(&dato,sizeof(char));
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+						cout<<setw(campos[i]->size+15)<<right<<dato;
+					}else{
+						char* dato = new char[campos[i]->size];
+						in2.read(dato, campos[i]->size*sizeof(char));
+
+										//cout<<campos[i]->name<<": "<<dato<<endl;
+						cout<<setw(campos[i]->size+15)<<right<<dato;
+					}
+				}
+
+			}
+			cout<<endl;
+		}
+		if(j%10 == 0 && j!=0){
+			char respuesta2;
+			cout<<"Ingrese 1 para ver 10 registros mas: ";
+			cin>>respuesta2;
+			if(respuesta2 != '1')
+				break;
+		}
+
+		if(*it != -1){
+			fstream in(nombre_archivo,ios::in|ios::binary);
+			in.seekg(*it,ios::beg);
+			Node* hijo = ReadNode(&in,type_key,size_key,tree_order);
+			in.close();
+			Listar(hijo,type_key,size_key,nombre_archivo,nombre_archivo2,sizeint, campos);	
+		}
+		++it;
+		j++;	
+		in2.close();	
+	}
+}
