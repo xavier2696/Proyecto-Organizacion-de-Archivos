@@ -923,7 +923,20 @@ int main(int argc, char* argv[]){
 			out.close();
 			remove(nombre_archivo);
 			rename(nombre_archivo2,nombre_archivo);
-
+			if(index == '2'){
+				stringstream ss2;
+				ss2<<ingresado<<".in";
+				char* nombre_archivo2 = new char(ingresado.size() + 4);
+				strcpy(nombre_archivo2, ss2.str().c_str());
+				nombre_archivo2[ingresado.size()+3] = '\0';
+				fstream in(nombre_archivo, ios::in|ios::binary);
+				Reindexar(&in,nombre_archivo2);
+				in.close();
+				ReadIndex(&indices,nombre_archivo2,cant_registros, campos[1]->type, campos[1]->size);
+			}
+			if(index == '3'){
+				CreateTree(nombre_archivo, ingresado,cant_campos, cant_registros, avail_list, campos);
+			}
 			//fstream out2(nombre_archivo, ios::out|ios::binary|ios::in);
 			//out2.seekp(sizeof(int), ios_base::beg);
 				//cout<<"registros "<<cant_registros<<endl;
@@ -1120,6 +1133,9 @@ int main(int argc, char* argv[]){
 				out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
 				out.close();
 
+			}
+			if(index == '3'){
+				CreateTree(nombre_archivo, ingresado,cant_campos, cant_registros, avail_list, campos);
 			}
 			
 
