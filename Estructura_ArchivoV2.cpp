@@ -12,6 +12,7 @@
 using namespace std;
 
 int tree_order = 16;
+int list_total = 0;
 
 struct Data{
 	string name;
@@ -36,6 +37,7 @@ bool ReadIndex(map<string,int>* ,char* ,long int , int , int);
 void Reindexar(fstream*, char*);
 bool Repetido(char* ,string,long int ,vector<Data*> );
 bool Busqueda_Arbol(string ,char* , int* , int , int );
+bool Search(string, Node* , int*,char* ,int , int);
 Node* ReadNode(fstream*, int , int ,int );
 bool Insertar(char* , int , int ,int , Key_Offset , int );
 void EscribirNodo(fstream* , int , int , Node*);
@@ -583,9 +585,11 @@ int main(int argc, char* argv[]){
 				in.seekg(root,ios::beg);
 				Node* nodo = ReadNode(&in, campos[1]->type, campos[1]->size, tree_order);
 				in.close();
-				cout<<"keys"<<nodo->cant_key<<endl;
-				cout<<"padre"<<nodo->pos_padre<<endl;
+				//cout<<"keys"<<nodo->cant_key<<endl;
+				//cout<<"padre"<<nodo->pos_padre<<endl;
 				Listar(nodo, campos[1]->type, campos[1]->size, nombre_archivo3,nombre_archivo,sizeint, campos);
+				//cout<<"total"<<list_total<<endl;
+				list_total = 0;
 			}
 			in.close();	
 			
@@ -664,6 +668,16 @@ int main(int argc, char* argv[]){
 				}catch(const std::out_of_range& oor){
 					posicion = -1;
 				}
+			}else if (index == '3'){
+				stringstream ss3;
+				ss3<<ingresado<<".btree";
+				char* nombre_archivo3 = new char[ss3.str().size()];
+				strcpy(nombre_archivo3,ss3.str().c_str());
+				if(!Busqueda_Arbol(key,nombre_archivo3, &posicion, campos[1]->type, campos[1]->size))
+					posicion = -1;
+				else
+					posicion++;
+				//cout<<"pos"<< posicion<<endl;			
 			}
 			if(posicion == -1){
 				cout<<"No se encontro un registro con esa llave"<<endl;
@@ -766,6 +780,14 @@ int main(int argc, char* argv[]){
 				}catch(const std::out_of_range& oor){
 					posicion = -1;
 				}
+			}else if(index == '3'){
+				stringstream ss3;
+				ss3<<ingresado<<".btree";
+				char* nombre_archivo3 = new char[ss3.str().size()];
+				strcpy(nombre_archivo3,ss3.str().c_str());
+				if(!Busqueda_Arbol(key,nombre_archivo3, &posicion, campos[1]->type, campos[1]->size))
+					posicion = -1;
+				//cout<<"pos"<< posicion<<endl;
 			}
 			if(posicion == -1){
 				cout<<"No se encontro un registro con esa llave"<<endl;
@@ -807,6 +829,9 @@ int main(int argc, char* argv[]){
 					terminado = '1';
 					out.write(reinterpret_cast<char*>(&terminado), sizeof(char));
 					out.close();
+				}
+				if(index == '3'){
+					CreateTree(nombre_archivo, ingresado,cant_campos, cant_registros, avail_list, campos);
 				}	
 				ofstream out(nombre_archivo, ios::out|ios::binary|ios::in);
 				out.seekp(posicion-1,ios_base::beg);
@@ -1699,7 +1724,7 @@ bool Repetido(char* nombre_archivo,string llave,long int cant_registros,vector<D
 }
 
 
-bool Busqueda_Arbol(string buscado,char* nombre_archivo2,int* pos_buscado, int type_key, int size_key){
+/*bool Busqueda_Arbol(string buscado,char* nombre_archivo2,int* pos_buscado, int type_key, int size_key){
 	fstream in(nombre_archivo2,ios::in|ios::binary);
 	int pos_root;
 	int order = tree_order;
@@ -1720,7 +1745,10 @@ bool Busqueda_Arbol(string buscado,char* nombre_archivo2,int* pos_buscado, int t
 		int cont = 0;
 		bool menor = true;
 		for (list<Key_Offset>::iterator it=(actual->llaves).begin(); it != (actual->llaves).end(); ++it){
+			cout<<it->key<<endl;
+			cout<<buscado<<endl;
 			if(it->key == buscado){
+				//cout<<it->offset<<endl;
 				*pos_buscado = it->offset;
 				in.close();
 				return true;
@@ -1735,15 +1763,18 @@ bool Busqueda_Arbol(string buscado,char* nombre_archivo2,int* pos_buscado, int t
 				//	in.seekp(nodo_siguiente,ios::beg);
 				break;
 			}
+			if(buscado > it->key && it->key == actual->llaves.back().key && menor){
+				nodo_siguiente = actual->hijos.back();
+			}
 			cont++;
 		}
-    	if(nodo_siguiente == -1 && menor){
+    	//if(nodo_siguiente == -1 && menor){
     		//list<int>::iterator it2 = (actual->hijos).end();
     		//--it2;
     		//cout<<"ultimo"<<*it2<<endl;
-			nodo_siguiente = actual->hijos.back();
+		//	nodo_siguiente = actual->hijos.back();
 			//nodo_siguiente = *it2;
-    	}
+    	//}
     	//cout<<"siguente "<<nodo_siguiente<<endl;
     	if(nodo_siguiente != -1){
     		//cout<<"diferente"<<endl;
@@ -1758,6 +1789,51 @@ bool Busqueda_Arbol(string buscado,char* nombre_archivo2,int* pos_buscado, int t
 	//cout<<"pos buscado"<<*pos_buscado<<endl;
 	in.close();
 	return false;
+}*/
+bool Busqueda_Arbol(string buscado,char* nombre_archivo2,int* posnodo_insertar, int type_key, int size_key){
+	fstream in(nombre_archivo2,ios::in|ios::binary);
+	int pos_root;
+	int order = tree_order;
+	in.read(reinterpret_cast<char*>(&pos_root), sizeof(int));
+	//cout<<"pos root "<<pos_root<<endl;
+	*posnodo_insertar = pos_root;
+	in.seekp(pos_root,ios::beg);
+	Node* actual = ReadNode(&in,type_key,size_key,order);
+	in.close();
+	return Search(buscado, actual, posnodo_insertar,nombre_archivo2,type_key, size_key);
+}
+
+bool Search(string buscado, Node* root, int* pos,char* nombre_archivo,int type_key, int size_key){
+	list<int>::iterator it2 = root->hijos.begin();
+
+	for (list<Key_Offset>::iterator it=(root->llaves).begin(); it != (root->llaves).end(); ++it){
+		//cout<<it->key<<endl;
+		if(it->key == buscado){
+			*pos = it->offset;
+			return true;
+		}else{
+			if(type_key == 1){
+				if (atoi(buscado.c_str()) < atoi(it->key.c_str())){
+					break;
+				}
+			}else{
+				if (buscado < it->key){
+					break;
+				}
+			}
+		}
+		it2++;
+
+	}
+	bool retorno = false;
+	if(*it2 != -1){
+		fstream in(nombre_archivo,ios::in|ios::binary);
+		in.seekg(*it2,ios::beg);
+		Node* neo = ReadNode(&in,type_key,size_key,tree_order);
+		*pos = *it2;
+		retorno  = retorno || Search(buscado,neo,pos,nombre_archivo,type_key,size_key);
+	}
+	return retorno;
 }
 
 Node* ReadNode(fstream* in, int type_key, int size_key,int order){
@@ -1830,15 +1906,28 @@ bool Insertar(char* nombre_archivo, int key_type, int size_key,int pos_insertar,
 	list<int>::iterator it2 = nodo->hijos.begin();
 	//cout<<"hijo "<<*it2<<endl;
 	++it2;
-	while(it !=nodo->llaves.end()){//for (it=(nodo->llaves).begin(); it != (nodo->llaves).end(); ++it){
-		//cout<<"llave"<<it->key<<endl;
-		if(it->key > llave.key){
-			break;
+	if(key_type == 1){
+		while(it !=nodo->llaves.end()){//for (it=(nodo->llaves).begin(); it != (nodo->llaves).end(); ++it){
+			//cout<<"llave"<<it->key<<endl;
+			if(atoi((it->key).c_str()) > atoi(llave.key.c_str())){
+				break;
+			}
+			//cout<<"hijo "<<*it2<<endl;
+			++it;
+			++it2;		
 		}
-		//cout<<"hijo "<<*it2<<endl;
-		++it;
-		++it2;		
-	}	
+	}else{
+		while(it !=nodo->llaves.end()){//for (it=(nodo->llaves).begin(); it != (nodo->llaves).end(); ++it){
+			//cout<<"llave"<<it->key<<endl;
+			if(it->key > llave.key){
+				break;
+			}
+			//cout<<"hijo "<<*it2<<endl;
+			++it;
+			++it2;		
+		}
+	}
+		
 	//cout<<"llave final"<<(*it).key<<endl;
 	//cout<<"hijo final"<<*it2<<endl;
 	nodo->llaves.insert(it,llave);
@@ -1993,6 +2082,12 @@ void CreateTree(char* nombre_archivo, string ingresado,int cant_campos, int cant
 	ss<<ingresado<<".btree";
 	char* nombre_archivo2 = new char[ss.str().size()];
 	strcpy(nombre_archivo2,ss.str().c_str());
+	fstream prueba(nombre_archivo2,ios::in|ios::binary);
+	if(prueba.is_open()){
+		prueba.close();
+		remove(nombre_archivo2);
+	}else
+		prueba.close();
 	fstream in(nombre_archivo,ios::in|ios::binary);	
 	int size_header = sizeof(int)*2+sizeof(long int)+cant_campos*(sizeof(int)*2+15);
 	in.seekg(size_header,ios::beg);
@@ -2147,6 +2242,7 @@ void Listar(Node* nodo, int type_key, int size_key, char* nombre_archivo,char* n
 			}
 			j--;*/
 		}else{
+			list_total++;
 			cout<<"Registro "<<setw(10)<<left;
 			for(int i = 1; i<campos.size(); i++){
 				if(campos[i]->type == 1){
